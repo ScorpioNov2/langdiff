@@ -925,3 +925,13 @@ body.ld-drag-active .ld-drag-overlay {
 @supports (-moz-appearance: none) {
   * { scrollbar-width: thin; scrollbar-color: #c4cbd3 transparent; }
 }
+
+/* ---------- CodeMirror editors ---------- */
+.ld-cm { flex: 1; min-width: 0; min-height: 0; display: flex; }
+.ld-cm .cm-editor { flex: 1; min-width: 0; height: 100%; }
+.ld-cm .cm-scroller { overflow: auto; }
+.cm-flash-line { animation: ld-cm-flash 1.5s ease-out; }
+@keyframes ld-cm-flash {
+  0% { background: rgba(255, 196, 0, 0.65); }
+  100% { background: rgba(255, 212, 0, 0); }
+}
