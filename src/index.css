@@ -740,7 +740,7 @@ body.ld-drag-active .ld-drag-overlay {
 .ld-mode-info:empty { display: none; }
 
 .ld-select {
-  width: 140px;
+  width: 150px;
   height: 30px;
   padding: 0 26px 0 10px;
   appearance: none;
@@ -854,3 +854,74 @@ body.ld-drag-active .ld-drag-overlay {
 .ld-diff-line.ld-file.ld-nav-active { box-shadow: inset 0 0 0 2px #d4a72c, inset 3px 0 0 #0969da; }
 
 .ld-files-head .ld-files-close { width: 28px; min-width: 28px; padding: 0; font-size: 18px; line-height: 1; }
+
+/* ---------- Merge ---------- */
+.ld-mergebar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: #fffbea;
+  border-bottom: 1px solid #f0e2b6;
+}
+.ld-compare .ld-mergebar { display: flex; }
+.ld-merge-info { font-size: 12px; color: #7d4e00; white-space: nowrap; }
+.ld-merge-spacer { flex: 1; }
+.ld-mergebar .ld-btn { height: 28px; padding: 0 10px; }
+.ld-mergebar .ld-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ld-diff-line.ld-chunk {
+  align-items: center;
+  background: #fff8e1;
+  border-top: 1px solid #f0e2b6;
+  border-bottom: 1px solid #f0e2b6;
+}
+.ld-diff-line.ld-chunk .ld-line-numbers,
+.ld-diff-line.ld-chunk .ld-line-separator { display: none; }
+.ld-diff-line.ld-chunk .ld-line-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 14px;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #7d4e00;
+}
+.ld-ch-label { flex: 1; }
+.ld-ch-btn {
+  height: 22px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #24292f;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ld-ch-btn:hover { background: #f3f4f6; }
+.ld-ch-btn.on-a { background: #ffebe9; border-color: #cf222e; color: #82071e; }
+.ld-ch-btn.on-b { background: #e6ffec; border-color: #1a7f37; color: #116329; }
+
+.ld-rejected { opacity: 0.4; }
+.ld-rejected .ld-line-content,
+.ld-rejected .ld-hc { text-decoration: line-through; }
+
+/* ---------- Rounded scrollbars ---------- */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: #c4cbd3;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: #9aa4b0; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+
+/* Firefox has no ::-webkit-scrollbar; give it the thin rounded default */
+@supports (-moz-appearance: none) {
+  * { scrollbar-width: thin; scrollbar-color: #c4cbd3 transparent; }
+}
