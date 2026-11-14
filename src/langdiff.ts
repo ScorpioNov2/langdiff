@@ -39,12 +39,10 @@
  *   stale background/spacing.
  */
 
+import { createEditor, LANGUAGES, type LangId } from "./editor";
+
 const LINE_HEIGHT_PX = 21; // 14px * 1.5 line-height, matches the CSS below
-const EDITOR_PADDING_TOP = 15;
-const GUTTER_BUFFER = 8;
 const VIEWER_BUFFER_PX = 400;
-const INPUT_WINDOW_BUFFER_LINES = 600; // lines of buffer loaded above/below the viewport in the real textarea
-const INPUT_WINDOW_EDGE_MARGIN_LINES = 250; // swap in a new window once scrolled within this many lines of the loaded edge
 const MONO_FONT =
   "500 14px ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace";
 const NUM_FONT =
@@ -73,13 +71,6 @@ interface FileInfo {
   added: number;
   removed: number;
   firstRow: number;
-}
-
-interface LineColSelection {
-  startLine: number;
-  startCol: number;
-  endLine: number;
-  endCol: number;
 }
 
 function measureCharWidth(): number {
@@ -116,7 +107,7 @@ function parseBilingual(lines: string[]): DiffLine[] {
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].replace(/[\r\n]/g, "").trimEnd();
     let type: LineType = "normal";
-    let content = trimmed;
+    let content: string;
     let oldNum: number | "" = "";
     let newNum: number | "" = "";
 
@@ -462,6 +453,8 @@ export function initLangdiff(root: HTMLElement) {
           <option value="patch">Patch / diff</option>
           <option value="compare">Compare (A === B)</option>
         </select>
+        <select class="ld-select" id="ld-lang" title="Editor language" data-testid="select-language"></select>
+        <button class="ld-btn" id="ld-theme-btn" title="Editor theme" data-testid="button-theme">Theme: Light</button>
         <button class="ld-btn ld-cmp-only" id="ld-split-btn" data-testid="button-split-view">Split view</button>
         <button class="ld-btn ld-cmp-only" id="ld-syntax-btn" data-testid="button-syntax">Syntax: off</button>
         <button class="ld-btn" id="ld-find-btn" data-testid="button-find">
@@ -532,21 +525,11 @@ export function initLangdiff(root: HTMLElement) {
       <div class="ld-left-col" id="ld-left-panel">
       <div class="ld-pane-title">Text A &mdash; original</div>
       <div class="ld-editor-container" id="ld-editor-box">
-        <div class="ld-editor-line-numbers" id="ld-gutter">
-          <div class="ld-gutter-inner" id="ld-gutter-inner"></div>
-        </div>
-        <div class="ld-editor-highlight" id="ld-editor-highlight"></div>
-        <textarea id="ld-input-area" class="ld-input-area" spellcheck="false"
-          placeholder="Paste your bilingual text here...&#10;- Vietnamese line&#10;+ English line&#10;&#10;...or load a .patch / .diff file"
-          data-testid="input-editor"></textarea>
+        <div class="ld-cm" id="ld-cm-a" data-testid="input-editor"></div>
       </div>
       <div class="ld-b-pane" id="ld-b-pane">
         <div class="ld-pane-title">Text B &mdash; modified</div>
-        <div class="ld-b-body">
-        <div class="ld-editor-line-numbers" id="ld-b-gutter"><div class="ld-b-nums" id="ld-b-nums"></div></div>
-        <textarea id="ld-input-b" class="ld-input-area ld-input-b" spellcheck="false"
-          placeholder="Paste text B (modified) here..." data-testid="input-editor-b"></textarea>
-        </div>
+        <div class="ld-cm" id="ld-cm-b" data-testid="input-editor-b"></div>
       </div>
       </div>
       <div class="ld-viewer-scroll" id="ld-viewer-scroll" data-testid="viewer-diff">
@@ -592,9 +575,6 @@ export function initLangdiff(root: HTMLElement) {
 
   const dropZone = root.querySelector<HTMLElement>("#ld-drop-zone")!;
   const leftPanel = root.querySelector<HTMLElement>("#ld-left-panel")!;
-  const textarea = root.querySelector<HTMLTextAreaElement>("#ld-input-area")!;
-  const gutter = root.querySelector<HTMLElement>("#ld-gutter")!;
-  const gutterInner = root.querySelector<HTMLElement>("#ld-gutter-inner")!;
   const viewerScroll = root.querySelector<HTMLElement>("#ld-viewer-scroll")!;
   const viewerSpacer = root.querySelector<HTMLElement>("#ld-viewer-spacer")!;
   const viewerEmpty = root.querySelector<HTMLElement>("#ld-viewer-empty")!;
@@ -613,253 +593,70 @@ export function initLangdiff(root: HTMLElement) {
   const gotoInput = root.querySelector<HTMLInputElement>("#ld-goto-input")!;
   const gotoBtn = root.querySelector<HTMLButtonElement>("#ld-goto-btn")!;
   const searchCloseBtn = root.querySelector<HTMLButtonElement>("#ld-search-close")!;
-  const editorHighlight = root.querySelector<HTMLElement>("#ld-editor-highlight")!;
 
-  // ---------- Document model + windowed (virtualized) input ----------
+  // ---------- Editors (CodeMirror 6) ----------
 
-  // The full document. This - not the textarea's own .value - is the source
-  // of truth, so the real textarea can hold just a bounded window of it.
-  let documentLines: string[] = [""];
-  let totalLines = 1;
+  const LANG_KEY = "langdiff_lang";
+  const THEME_KEY = "langdiff_theme";
+  const B_KEY = "langdiff_b";
+  const DEFAULT_PLACEHOLDER =
+    "Paste your bilingual text here...\n- Vietnamese line\n+ English line\n\n...or load a .patch / .diff file";
 
-  // Inclusive line-index range of documentLines currently loaded into the
-  // real textarea. Start sentinel at -1/-1 (an impossible range) so the
-  // very first loadWindow() call is never mistaken for a no-op.
-  let windowStart = -1;
-  let windowEnd = -1;
+  const savedLang = localStorage.getItem(LANG_KEY);
+  let editorLang: LangId = LANGUAGES.some((l) => l.id === savedLang) ? (savedLang as LangId) : "text";
+  let editorDark = localStorage.getItem(THEME_KEY) === "dark";
 
-  let isComposing = false;
-  let gutterScheduled = false;
-  const gutterPool: HTMLDivElement[] = [];
-
-  function getOrCreateGutterRow(idx: number): HTMLDivElement {
-    if (!gutterPool[idx]) {
-      const el = document.createElement("div");
-      el.className = "ld-gutter-row";
-      gutterPool[idx] = el;
-    }
-    return gutterPool[idx];
-  }
-
-  // The textarea only ever contains the current window's lines, so its own
-  // scrollTop is relative to the window, not the document. This converts it
-  // back to a position in the full (virtual) document, which is what the
-  // gutter and highlight overlay need.
-  function globalScrollTop(): number {
-    return windowStart * LINE_HEIGHT_PX + textarea.scrollTop;
-  }
-
-  // Captures the current selection as (line, column) rather than raw
-  // character offsets, since offsets are only meaningful within whichever
-  // window happens to be loaded. Cost is O(selection offset), which is
-  // bounded by the window size (never the whole document).
-  function getSelectionAsLineCol(): LineColSelection | null {
-    if (document.activeElement !== textarea) return null;
-    const value = textarea.value;
-    function posToLineCol(pos: number): { line: number; col: number } {
-      let line = 0;
-      let lastNL = -1;
-      for (let i = 0; i < pos; i++) {
-        if (value.charCodeAt(i) === 10) {
-          line = line + 1;
-          lastNL = i;
-        }
-      }
-      return { line: windowStart + line, col: pos - lastNL - 1 };
-    }
-    const s = posToLineCol(textarea.selectionStart);
-    const e = posToLineCol(textarea.selectionEnd);
-    return { startLine: s.line, startCol: s.col, endLine: e.line, endCol: e.col };
-  }
-
-  // Restores a (line, column) selection after a window swap, if the saved
-  // position still falls within the newly-loaded window. Returns false if
-  // it doesn't (the user scrolled away from their cursor), in which case we
-  // leave selection alone rather than point it somewhere wrong.
-  function setSelectionFromLineCol(sel: LineColSelection): boolean {
-    if (sel.startLine < windowStart || sel.endLine > windowEnd) return false;
-    const lines = textarea.value.split("\n");
-    const startRel = sel.startLine - windowStart;
-    const endRel = sel.endLine - windowStart;
-    if (startRel < 0 || startRel >= lines.length || endRel < 0 || endRel >= lines.length) {
-      return false;
-    }
-    function lineColToPos(relLine: number, col: number): number {
-      let pos = 0;
-      for (let i = 0; i < relLine; i++) pos += lines[i].length + 1;
-      return pos + Math.min(col, lines[relLine].length);
-    }
-    textarea.focus();
-    textarea.setSelectionRange(
-      lineColToPos(startRel, sel.startCol),
-      lineColToPos(endRel, sel.endCol),
-    );
-    return true;
-  }
-
-  // Swaps in a new window of documentLines. Cost is O(window size), never
-  // O(total document size), which is the entire point: the real textarea
-  // never has to hold (or let the browser lay out / IME-compose against)
-  // more than a bounded number of lines, no matter how large the document
-  // grows. preserveGlobalTop lets a caller keep the exact same visual
-  // scroll position across the swap (used for edge-triggered swaps during
-  // scrolling); when omitted it's derived from the current state.
-  function loadWindow(rawStart: number, rawEnd: number, preserveGlobalTop?: number) {
-    const clampedTotal = Math.max(1, totalLines);
-    const newStart = Math.max(0, Math.min(rawStart, clampedTotal - 1));
-    const newEnd = Math.max(newStart, Math.min(rawEnd, clampedTotal - 1));
-    if (newStart === windowStart && newEnd === windowEnd) return;
-
-    const savedSel = getSelectionAsLineCol();
-    const hadFocus = document.activeElement === textarea;
-    const targetGlobalTop = preserveGlobalTop ?? globalScrollTop();
-
-    windowStart = newStart;
-    windowEnd = newEnd;
-    textarea.value = documentLines.slice(windowStart, windowEnd + 1).join("\n");
-    textarea.scrollTop = Math.max(0, targetGlobalTop - windowStart * LINE_HEIGHT_PX);
-
-    if (hadFocus && savedSel) setSelectionFromLineCol(savedSel);
-  }
-
-  // Edge detection: once scrolled within INPUT_WINDOW_EDGE_MARGIN_LINES of
-  // the top or bottom of the currently-loaded window, swap in a freshly
-  // centered window before the buffer actually runs out. The margin (250
-  // lines = 5250px) is generous relative to any realistic scroll/fling
-  // speed, so this always finishes well before the user could scroll past
-  // the remaining buffer - that's what avoids any blank-screen flash.
-  function maybeSwapWindow() {
-    if (isComposing) return; // never swap mid-IME-composition - see compositionend
-    const edgeMarginPx = INPUT_WINDOW_EDGE_MARGIN_LINES * LINE_HEIGHT_PX;
-    const nearTop = textarea.scrollTop < edgeMarginPx && windowStart > 0;
-    const nearBottom =
-      textarea.scrollTop > textarea.scrollHeight - textarea.clientHeight - edgeMarginPx &&
-      windowEnd < totalLines - 1;
-    if (!nearTop && !nearBottom) return;
-
-    const curGlobalTop = globalScrollTop();
-    const viewportStartLine = Math.floor(curGlobalTop / LINE_HEIGHT_PX);
-    const viewportEndLine = Math.ceil((curGlobalTop + textarea.clientHeight) / LINE_HEIGHT_PX);
-    loadWindow(
-      viewportStartLine - INPUT_WINDOW_BUFFER_LINES,
-      viewportEndLine + INPUT_WINDOW_BUFFER_LINES,
-      curGlobalTop,
-    );
-  }
-
-  function renderGutter() {
-    gutterScheduled = false;
-    const scrollTop = globalScrollTop();
-    const clientHeight = textarea.clientHeight;
-
-    const firstVisible = Math.floor(scrollTop / LINE_HEIGHT_PX);
-    const lastVisible = Math.ceil((scrollTop + clientHeight) / LINE_HEIGHT_PX);
-    const start = Math.max(0, firstVisible - GUTTER_BUFFER);
-    const end = Math.min(totalLines - 1, lastVisible + GUTTER_BUFFER);
-
-    const frag = document.createDocumentFragment();
-    for (let i = start; i <= end; i++) {
-      const row = getOrCreateGutterRow(i - start);
-      row.textContent = String(i + 1);
-      frag.appendChild(row);
-    }
-    gutterInner.replaceChildren(frag);
-    gutterInner.style.transform = `translateY(${EDITOR_PADDING_TOP + start * LINE_HEIGHT_PX - scrollTop}px)`;
-  }
-
-  function scheduleGutterUpdate() {
-    if (gutterScheduled) return;
-    gutterScheduled = true;
-    requestAnimationFrame(renderGutter);
-  }
-
-  // Resets the whole document (initial load / cache restore / file open) and
-  // establishes a fresh initial window from the top.
-  function resetDocumentAndWindow(text: string) {
-    documentLines = text.split("\n");
-    if (documentLines.length === 0) documentLines = [""];
-    totalLines = documentLines.length;
-    windowStart = -1;
-    windowEnd = -1;
-    loadWindow(0, Math.min(totalLines - 1, INPUT_WINDOW_BUFFER_LINES));
-    scheduleGutterUpdate();
-  }
-
-  // Applies whatever's currently in the (windowed) textarea back into
-  // documentLines. Cost is O(window size): splitting and splicing a
-  // ~1000-2000 line window, never the full document, is what keeps every
-  // keystroke - and, crucially, every IME composition step, which is far
-  // more sensitive to textarea size than plain typing - fast regardless of
-  // how large the overall document grows.
-  function applyLocalEdit() {
-    const newWindowLines = textarea.value.split("\n");
-    documentLines.splice(windowStart, windowEnd - windowStart + 1, ...newWindowLines);
-    windowEnd = windowStart + newWindowLines.length - 1;
-    totalLines = documentLines.length;
-    scheduleGutterUpdate();
-
-    // A very large paste (or, in principle, an extremely long unbroken
-    // typing/Enter session) can grow the live window far past its normal
-    // bounds. Shrink it back down immediately around the caret - bounded
-    // cost, only runs when this actually happens - so the real textarea
-    // never ends up permanently holding a huge chunk of the document.
-    const currentWindowSize = windowEnd - windowStart + 1;
-    if (!isComposing && currentWindowSize > INPUT_WINDOW_BUFFER_LINES * 4) {
-      const caretLine =
-        windowStart + (textarea.value.slice(0, textarea.selectionStart).split("\n").length - 1);
-      loadWindow(caretLine - INPUT_WINDOW_BUFFER_LINES, caretLine + INPUT_WINDOW_BUFFER_LINES);
-    }
-  }
-
-  textarea.addEventListener("input", applyLocalEdit);
-  textarea.addEventListener("scroll", () => {
-    maybeSwapWindow();
-    scheduleGutterUpdate();
+  let saveTimer: number | undefined;
+  const editorA = createEditor(root.querySelector<HTMLElement>("#ld-cm-a")!, {
+    doc: localStorage.getItem(STORAGE_KEY) ?? "",
+    placeholder: DEFAULT_PLACEHOLDER,
+    language: editorLang,
+    dark: editorDark,
+    onChange: () => {
+      window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => localStorage.setItem(STORAGE_KEY, editorA.getText()), 400);
+    },
   });
-  textarea.addEventListener("compositionstart", () => {
-    isComposing = true;
-  });
-  textarea.addEventListener("compositionend", () => {
-    isComposing = false;
-    maybeSwapWindow();
-    scheduleGutterUpdate();
-  });
-  window.addEventListener("resize", scheduleGutterUpdate);
-
-  // Ctrl/Cmd+Home and +End are expected to jump to the true start/end of the
-  // whole document. Left to native behavior they'd only jump within the
-  // currently-loaded window, since that's all the real textarea knows about.
-  textarea.addEventListener("keydown", (e) => {
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key === "Home") {
-      e.preventDefault();
-      jumpToLine(0, true);
-    } else if (mod && e.key === "End") {
-      e.preventDefault();
-      jumpToLine(totalLines - 1, true);
-    }
+  const editorB = createEditor(root.querySelector<HTMLElement>("#ld-cm-b")!, {
+    doc: localStorage.getItem(B_KEY) ?? "",
+    placeholder: "Paste text B (modified) here...",
+    language: editorLang,
+    dark: editorDark,
+    onChange: () => localStorage.setItem(B_KEY, editorB.getText()),
   });
 
-  // Native "select all" (Ctrl/Cmd+A) only selects the loaded window, since
-  // that's the entirety of the textarea's real value. If the selection at
-  // copy time exactly spans the whole loaded window (the fingerprint of a
-  // select-all) and the window isn't already the whole document, copy the
-  // full document instead of just what's currently loaded.
-  textarea.addEventListener("copy", (e) => {
-    const full = textarea.value;
-    const isWholeWindowSelected =
-      full.length > 0 && textarea.selectionStart === 0 && textarea.selectionEnd === full.length;
-    if (isWholeWindowSelected && (windowStart > 0 || windowEnd < totalLines - 1)) {
-      e.preventDefault();
-      e.clipboardData?.setData("text/plain", documentLines.join("\n"));
-    }
+  const langSel = root.querySelector<HTMLSelectElement>("#ld-lang")!;
+  for (const l of LANGUAGES) {
+    const o = document.createElement("option");
+    o.value = l.id;
+    o.textContent = l.label;
+    langSel.appendChild(o);
+  }
+  langSel.value = editorLang;
+  langSel.addEventListener("change", () => {
+    editorLang = langSel.value as LangId;
+    localStorage.setItem(LANG_KEY, editorLang);
+    editorA.setLanguage(editorLang);
+    editorB.setLanguage(editorLang);
+  });
+
+  const themeBtn = root.querySelector<HTMLButtonElement>("#ld-theme-btn")!;
+  const syncThemeBtn = () => {
+    themeBtn.textContent = editorDark ? "Theme: Dark" : "Theme: Light";
+  };
+  syncThemeBtn();
+  themeBtn.addEventListener("click", () => {
+    editorDark = !editorDark;
+    localStorage.setItem(THEME_KEY, editorDark ? "dark" : "light");
+    editorA.setDark(editorDark);
+    editorB.setDark(editorDark);
+    syncThemeBtn();
   });
 
   // ---------- Diff parsing ----------
 
   const modeSelect = root.querySelector<HTMLSelectElement>("#ld-mode")!;
   const modeInfo = root.querySelector<HTMLElement>("#ld-mode-info")!;
-  const bBox = root.querySelector<HTMLTextAreaElement>("#ld-input-b")!;
   let fileInfos: FileInfo[] = [];
   let viewKind: "bilingual" | "patch" | "compare" = "bilingual";
   let compareRows: DiffLine[] = [];
@@ -893,7 +690,7 @@ export function initLangdiff(root: HTMLElement) {
         while (r.length && r[r.length - 1].trim() === "") r.pop();
         return r;
       };
-      const bText = bBox.value;
+      const bText = editorB.getText();
       const useSep = sep >= 0 && bText.trim() === "";
       const A = clean(useSep ? lines.slice(0, sep) : lines);
       const B = clean(useSep ? lines.slice(sep + 1) : bText.split("\n"));
@@ -1249,12 +1046,12 @@ export function initLangdiff(root: HTMLElement) {
   }
 
   function processText() {
-    const rawText = documentLines.join("\n");
+    const rawText = editorA.getText();
     if (!rawText.trim()) return;
 
     localStorage.setItem(STORAGE_KEY, rawText);
     viewerEmpty.style.display = "none";
-    diffLines = parseDiff(documentLines);
+    diffLines = parseDiff(rawText.split("\n"));
     collapsed.clear();
     buildFileList();
     syncCompareUi();
@@ -1270,12 +1067,10 @@ export function initLangdiff(root: HTMLElement) {
     splitBtn.textContent = compareView === "split" ? "Unified view" : "Split view";
     syntaxBtn.textContent = syntaxOn ? "Syntax: on" : "Syntax: off";
   }
-  const defaultPlaceholder = textarea.placeholder;
   function syncCompareUi() {
     const on = modeSelect.value === "compare" || viewKind === "compare";
     root.classList.toggle("ld-compare", on);
-    textarea.placeholder = on ? "Paste text A (original) here..." : defaultPlaceholder;
-    scheduleGutterUpdate();
+    editorA.setPlaceholder(on ? "Paste text A (original) here..." : DEFAULT_PLACEHOLDER);
     updateMergeBar();
   }
   syncCompareButtons();
@@ -1379,12 +1174,10 @@ export function initLangdiff(root: HTMLElement) {
       else if (st === 2) { A.push(r.content); B.push(r.content); }
     }
     if (compareUsedSep) {
-      resetDocumentAndWindow(A.join("\n") + "\n===\n" + B.join("\n"));
+      editorA.setText(A.join("\n") + "\n===\n" + B.join("\n"));
     } else {
-      resetDocumentAndWindow(A.join("\n"));
-      bBox.value = B.join("\n");
-      localStorage.setItem("langdiff_b", bBox.value);
-      updateBGutter();
+      editorA.setText(A.join("\n"));
+      editorB.setText(B.join("\n"));
     }
     processText();
   });
@@ -1593,7 +1386,7 @@ export function initLangdiff(root: HTMLElement) {
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || fileInfos.length === 0) return;
     const tag = (e.target as HTMLElement).tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement).isContentEditable) return;
     switch (e.key) {
       case "j": stepHunk(1); break;
       case "k": stepHunk(-1); break;
@@ -1625,20 +1418,6 @@ export function initLangdiff(root: HTMLElement) {
 
   function closeSearch() {
     searchBar.classList.remove("ld-search-bar-open");
-    clearEditorHighlight();
-  }
-
-  function clearEditorHighlight() {
-    editorHighlight.style.display = "none";
-  }
-
-  function flashEditorLine(lineIndex: number) {
-    editorHighlight.style.top = `${EDITOR_PADDING_TOP + lineIndex * LINE_HEIGHT_PX - globalScrollTop()}px`;
-    editorHighlight.style.height = `${LINE_HEIGHT_PX}px`;
-    editorHighlight.style.display = "block";
-    editorHighlight.classList.remove("ld-flash-anim");
-    void editorHighlight.offsetWidth;
-    editorHighlight.classList.add("ld-flash-anim");
   }
 
   function updateSearchCount() {
@@ -1652,41 +1431,9 @@ export function initLangdiff(root: HTMLElement) {
   }
 
   function jumpToLine(lineIndex: number, focusEditor = false) {
-    if (lineIndex < 0 || lineIndex >= totalLines) return;
-
-    // Make sure the target line is actually loaded before we try to scroll
-    // to / select it - jumping (search, go-to-line, Ctrl+Home/End) is an
-    // explicit action, so this happens synchronously rather than waiting
-    // for a scroll event that may never come (e.g. jumping to a line
-    // that's already vertically centered needs no scroll at all).
-    if (lineIndex < windowStart || lineIndex > windowEnd) {
-      loadWindow(lineIndex - INPUT_WINDOW_BUFFER_LINES, lineIndex + INPUT_WINDOW_BUFFER_LINES);
-    }
-
-    const desiredGlobalTop = Math.max(0, lineIndex * LINE_HEIGHT_PX - textarea.clientHeight / 2);
-    textarea.scrollTop = Math.max(0, desiredGlobalTop - windowStart * LINE_HEIGHT_PX);
-    scheduleGutterUpdate();
-
-    // Only move keyboard focus (and select the matched line) for an
-    // explicit "jump into the editor" action such as Go to line. Live
-    // search-as-you-type must never steal focus away from the search input:
-    // it used to call textarea.focus() on every debounced keystroke, which
-    // yanked the cursor out of the search box and into the editor mid-type,
-    // so the next character typed landed in the document instead of the
-    // query. Scrolling + the flashEditorLine() highlight below are enough
-    // to show the match without touching focus.
-    if (focusEditor) {
-      const relLine = lineIndex - windowStart;
-      const lines = textarea.value.split("\n");
-      if (relLine >= 0 && relLine < lines.length) {
-        let start = 0;
-        for (let i = 0; i < relLine; i++) start += lines[i].length + 1;
-        const end = start + lines[relLine].length;
-        textarea.focus();
-        textarea.setSelectionRange(start, end);
-      }
-    }
-    requestAnimationFrame(() => flashEditorLine(lineIndex));
+    if (lineIndex < 0 || lineIndex >= editorA.view.state.doc.lines) return;
+    // Live search must not steal focus from the search box; only "Go to line" focuses the editor.
+    editorA.flashLine(lineIndex, focusEditor);
 
     const lf = diffLines[lineIndex]?.file;
     if (lf !== undefined && lf >= 0 && collapsed.has(lf) && diffLines[lineIndex].type !== "file") {
@@ -1722,8 +1469,9 @@ export function initLangdiff(root: HTMLElement) {
     currentMatchIdx = -1;
     if (query.trim()) {
       const q = query.toLowerCase();
-      for (let i = 0; i < documentLines.length; i++) {
-        if (documentLines[i].toLowerCase().includes(q)) searchMatches.push(i);
+      const doc = editorA.view.state.doc;
+      for (let i = 1; i <= doc.lines; i++) {
+        if (doc.line(i).text.toLowerCase().includes(q)) searchMatches.push(i - 1);
       }
       if (searchMatches.length > 0) currentMatchIdx = 0;
     }
@@ -1755,7 +1503,7 @@ export function initLangdiff(root: HTMLElement) {
   searchCloseBtn.addEventListener("click", closeSearch);
 
   window.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f" && !(e.target instanceof Element && e.target.closest(".cm-editor"))) {
       e.preventDefault();
       openSearch();
     } else if (e.key === "Escape" && searchBar.classList.contains("ld-search-bar-open")) {
@@ -1795,8 +1543,8 @@ export function initLangdiff(root: HTMLElement) {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
+      editorA.setText(text);
       localStorage.setItem(STORAGE_KEY, text);
-      resetDocumentAndWindow(text);
       processText();
     };
     reader.readAsText(file);
@@ -1832,7 +1580,7 @@ export function initLangdiff(root: HTMLElement) {
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
       e.preventDefault();
-      localStorage.setItem(STORAGE_KEY, documentLines.join("\n"));
+      localStorage.setItem(STORAGE_KEY, editorA.getText());
       leftPanel.style.outline = "2px solid #4ade80";
       setTimeout(() => {
         leftPanel.style.outline = "";
@@ -1858,7 +1606,6 @@ export function initLangdiff(root: HTMLElement) {
       leftPanel.style.display = "flex";
       leftPanel.style.width = "50%";
       viewerScroll.style.width = "50%";
-      scheduleGutterUpdate();
     }
     // The diff viewer's wrapped-line heights (rowHeights/rowTops) depend on
     // its pixel width via charsPerLine. Toggling the input panel changes
@@ -1882,29 +1629,6 @@ export function initLangdiff(root: HTMLElement) {
     processText();
   });
 
-  const bNums = root.querySelector<HTMLElement>("#ld-b-nums")!;
-  let bLineCount = 0;
-  function updateBGutter() {
-    const v = bBox.value;
-    let n = 1;
-    for (let i = v.indexOf("\n"); i !== -1; i = v.indexOf("\n", i + 1)) n++;
-    if (n === bLineCount) return;
-    bLineCount = n;
-    const nums = new Array<number>(n);
-    for (let i = 0; i < n; i++) nums[i] = i + 1;
-    bNums.textContent = nums.join("\n");
-  }
-  bBox.value = localStorage.getItem("langdiff_b") ?? "";
-  updateBGutter();
-  bBox.addEventListener("input", () => {
-    localStorage.setItem("langdiff_b", bBox.value);
-    updateBGutter();
-  });
-  bBox.addEventListener("scroll", () => {
-    bNums.style.transform = `translateY(${-bBox.scrollTop}px)`;
-  });
   syncCompareUi();
-  const cached = localStorage.getItem(STORAGE_KEY);
-  resetDocumentAndWindow(cached ?? "");
-  if (cached) processText();
+  if (editorA.getText()) processText();
 }
