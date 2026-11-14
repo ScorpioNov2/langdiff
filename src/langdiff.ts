@@ -51,7 +51,7 @@ const NUM_FONT =
   "500 13px ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace";
 const STORAGE_KEY = "langdiff_content";
 
-type LineType = "normal" | "minus" | "plus" | "file" | "hunk" | "meta" | "noeol" | "split";
+type LineType = "normal" | "minus" | "plus" | "file" | "hunk" | "meta" | "noeol" | "split" | "chunk";
 type ParseMode = "auto" | "bilingual" | "patch" | "compare";
 const MODE_KEY = "langdiff_mode";
 
@@ -62,6 +62,7 @@ interface DiffLine {
   content: string;
   file?: number;
   parts?: [string, boolean][];
+  chunk?: number;
   left?: DiffLine;
   right?: DiffLine;
 }
@@ -299,7 +300,7 @@ function parsePatch(lines: string[]): { lines: DiffLine[]; stats: PatchStats; fi
   return { lines: out, stats, files };
 }
 
-const SEP_RE = /^={7,}\s*$/;
+const SEP_RE = /^={3}\s*$/;
 const TOKEN_RE = /\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]/gu;
 const KW_RE = /\b(?:const|let|var|function|return|if|else|for|while|import|export|from|class|new|async|await|def|fn|pub|use|struct|enum|impl|interface|type|extends|try|catch|throw|switch|case|break|continue|true|false|null|undefined|None|True|False|self|this)\b/g;
 type Part = [string, boolean];
@@ -364,6 +365,7 @@ function buildCompare(A: string[], B: string[]): DiffLine[] {
   const out: DiffLine[] = [];
   let o = 1;
   let n = 1;
+  let chunks = 0;
   for (let k = 0; k < ops.length; ) {
     if (ops[k][0] === "=") {
       out.push({ type: "normal", oldNum: o++, newNum: n++, content: A[ops[k][1]] });
@@ -383,8 +385,29 @@ function buildCompare(A: string[], B: string[]): DiffLine[] {
       const wp = wordParts(dRows[p].content, aRows[p].content);
       if (wp) { dRows[p].parts = wp[0]; aRows[p].parts = wp[1]; }
     }
-    for (const r of dRows) out.push(r);
-    for (const r of aRows) out.push(r);
+    const chunkId = chunks++;
+    for (const r of dRows) { r.chunk = chunkId; out.push(r); }
+    for (const r of aRows) { r.chunk = chunkId; out.push(r); }
+  }
+  return out;
+}
+
+/** Insert a "Change N" header row before each changed block (carries the A/B choice). */
+function withHeaders(rows: DiffLine[]): DiffLine[] {
+  const out: DiffLine[] = [];
+  for (let i = 0; i < rows.length; ) {
+    const c = rows[i].chunk;
+    if (c === undefined) { out.push(rows[i++]); continue; }
+    let j = i;
+    let m = 0;
+    let p = 0;
+    while (j < rows.length && rows[j].chunk === c) {
+      if (rows[j].type === "minus") m++;
+      else p++;
+      j++;
+    }
+    out.push({ type: "chunk", oldNum: "", newNum: "", content: `Change ${c + 1} \u00b7 \u2212${m} +${p}`, chunk: c });
+    for (; i < j; i++) out.push(rows[i]);
   }
   return out;
 }
@@ -394,6 +417,7 @@ function toSplit(rows: DiffLine[]): DiffLine[] {
   const out: DiffLine[] = [];
   const mk = (left?: DiffLine, right?: DiffLine): DiffLine => ({ type: "split", oldNum: "", newNum: "", content: "", left, right });
   for (let i = 0; i < rows.length; ) {
+    if (rows[i].type === "chunk") { out.push(rows[i]); i++; continue; }
     if (rows[i].type === "normal") { out.push(mk(rows[i], rows[i])); i++; continue; }
     const m: DiffLine[] = [];
     const p: DiffLine[] = [];
@@ -436,7 +460,7 @@ export function initLangdiff(root: HTMLElement) {
           <option value="auto">Auto</option>
           <option value="bilingual">Bilingual (- / +)</option>
           <option value="patch">Patch / diff</option>
-          <option value="compare">Compare (A ======= B)</option>
+          <option value="compare">Compare (A === B)</option>
         </select>
         <button class="ld-btn ld-cmp-only" id="ld-split-btn" data-testid="button-split-view">Split view</button>
         <button class="ld-btn ld-cmp-only" id="ld-syntax-btn" data-testid="button-syntax">Syntax: off</button>
@@ -485,6 +509,15 @@ export function initLangdiff(root: HTMLElement) {
       <span class="ld-fb-path" id="ld-fb-path" data-testid="text-current-file"></span>
       <span class="ld-fb-stats" id="ld-fb-stats"></span>
       <button class="ld-search-nav-btn" id="ld-fb-collapse" title="Collapse / expand file (c)" data-testid="button-collapse-file">Collapse</button>
+    </div>
+    <div class="ld-mergebar" id="ld-mergebar">
+      <span class="ld-merge-info" id="ld-merge-info" data-testid="text-merge-info"></span>
+      <button class="ld-btn" id="ld-take-all-b" data-testid="button-take-all-b">Take all B</button>
+      <button class="ld-btn" id="ld-keep-all-a" data-testid="button-keep-all-a">Keep all A</button>
+      <button class="ld-btn" id="ld-merge-reset" data-testid="button-merge-reset">Reset</button>
+      <span class="ld-merge-spacer"></span>
+      <button class="ld-btn" id="ld-merge-copy" data-testid="button-merge-copy">Copy merged</button>
+      <button class="ld-btn ld-btn-primary" id="ld-merge-apply" data-testid="button-merge-apply">Apply merge</button>
     </div>
     <aside class="ld-files-panel" id="ld-files-panel">
       <div class="ld-files-head">
@@ -551,7 +584,7 @@ export function initLangdiff(root: HTMLElement) {
           <p class="ld-modal-intro">Load a <code>.patch</code> or <code>.diff</code> file (git or unified format) and Langdiff switches to patch mode automatically. File headers and <code>@@</code> hunks get their own rows, only the single leading <code>+</code> / <code>-</code> / space is stripped (indentation is kept), and line numbers follow the real numbers from each hunk header. Use the mode selector in the toolbar to force Bilingual or Patch.</p>
           <p class="ld-modal-intro">Shortcuts (when focus is not in a text field): <code>j</code>/<code>k</code> next/previous hunk, <code>]</code>/<code>[</code> next/previous file, <code>c</code> fold/unfold current file, <code>f</code> file list. Clicking a file row also folds it.</p>
           <div class="ld-modal-section-title">COMPARE TWO TEXTS</div>
-          <p class="ld-modal-intro">Choose <em>Compare</em> in the mode selector: the editor becomes Text A (original) and a second box appears for Text B (modified). Click Render View and Langdiff diffs them line by line (a line containing only <code>=======</code> between two texts in Auto mode still works), highlights changed words, and offers a Split (side-by-side) view and optional Syntax colouring from the toolbar.</p>
+          <p class="ld-modal-intro">Choose <em>Compare</em> in the mode selector: the editor becomes Text A (original) and a second box appears for Text B (modified). Click Render View and Langdiff diffs them line by line (a line containing only <code>===</code> between two texts in Auto mode still works), highlights changed words, and offers a Split (side-by-side) view and optional Syntax colouring from the toolbar.</p>
         </div>
       </div>
     </div>
@@ -830,6 +863,13 @@ export function initLangdiff(root: HTMLElement) {
   let fileInfos: FileInfo[] = [];
   let viewKind: "bilingual" | "patch" | "compare" = "bilingual";
   let compareRows: DiffLine[] = [];
+  let chunkTake = new Uint8Array(0); // per change: 0 undecided, 1 keep A, 2 take B
+  let compareUsedSep = false;
+
+  function compareDisplay(): DiffLine[] {
+    const rows = withHeaders(compareRows);
+    return compareView === "split" ? toSplit(rows) : rows;
+  }
   let compareView: "unified" | "split" = localStorage.getItem("langdiff_cmpview") === "split" ? "split" : "unified";
   let syntaxOn = localStorage.getItem("langdiff_syntax") === "1";
 
@@ -858,10 +898,12 @@ export function initLangdiff(root: HTMLElement) {
       const A = clean(useSep ? lines.slice(0, sep) : lines);
       const B = clean(useSep ? lines.slice(sep + 1) : bText.split("\n"));
       compareRows = buildCompare(A, B);
+      compareUsedSep = useSep;
+      chunkTake = new Uint8Array(compareRows.reduce((m, r) => (r.chunk === undefined ? m : Math.max(m, r.chunk + 1)), 0));
       modeInfo.textContent = B.length === 0
         ? "Compare: text B is empty"
         : `Compare \u00b7 A ${A.length} lines \u00b7 B ${B.length} lines`;
-      return compareView === "split" ? toSplit(compareRows) : compareRows;
+      return compareDisplay();
     }
     modeInfo.textContent = "Bilingual";
     return parseBilingual(lines);
@@ -908,6 +950,32 @@ export function initLangdiff(root: HTMLElement) {
       </div>
     `;
     return row;
+  }
+
+  function rejected(d: DiffLine): boolean {
+    if (d.chunk === undefined) return false;
+    const st = chunkTake[d.chunk];
+    return (d.type === "minus" && st === 2) || (d.type === "plus" && st === 1);
+  }
+
+  function fillChunkRow(el: HTMLElement, d: DiffLine) {
+    const st = chunkTake[d.chunk as number];
+    const label = document.createElement("span");
+    label.className = "ld-ch-label";
+    label.textContent = d.content;
+    const btn = (text: string, side: number, on: string) => {
+      const b = document.createElement("button");
+      b.className = "ld-ch-btn" + (st === side ? ` ${on}` : "");
+      b.textContent = text;
+      b.dataset.chunk = String(d.chunk);
+      b.dataset.side = String(side);
+      return b;
+    };
+    el.replaceChildren(label, btn("Keep A", 1, "on-a"), btn("Take B", 2, "on-b"));
+  }
+
+  function refreshMounted() {
+    for (const [idx, row] of rowPool) fillRow(row, idx);
   }
 
   function statsNode(fi: FileInfo | undefined, cls: string): HTMLElement {
@@ -966,6 +1034,7 @@ export function initLangdiff(root: HTMLElement) {
   function fillHalf(el: HTMLElement, c: DiffLine | undefined, side: "l" | "r") {
     el.className = `ld-half ld-half-${side}` + (c ? (c.type !== "normal" ? ` ld-${c.type}` : "") : " ld-empty");
     el.children[0].textContent = c ? String(side === "l" ? c.oldNum : c.newNum) : "";
+    if (c && rejected(c)) el.classList.add("ld-rejected");
     renderContent(el.children[1] as HTMLElement, c ? c.content : "", c?.parts);
   }
 
@@ -975,6 +1044,7 @@ export function initLangdiff(root: HTMLElement) {
     row.style.top = `${rowTops[idx]}px`;
     row.style.height = `${rowHeights[idx]}px`;
     if (idx === navRow) row.classList.add("ld-nav-active");
+    if (rejected(d)) row.classList.add("ld-rejected");
     if (d.type === "split") {
       const wrap = row.children[3];
       fillHalf(wrap.children[0] as HTMLElement, d.left, "l");
@@ -993,7 +1063,9 @@ export function initLangdiff(root: HTMLElement) {
     if (d.type === "file" && d.file !== undefined && d.file >= 0) {
       fillFileRow(row.querySelector(".ld-line-content") as HTMLElement, d);
     }
-    if (d.parts || (syntaxOn && viewKind === "compare")) {
+    if (d.type === "chunk") {
+      fillChunkRow(row.querySelector(".ld-line-content") as HTMLElement, d);
+    } else if (d.parts || (syntaxOn && viewKind === "compare" && d.type !== "file")) {
       renderContent(row.querySelector(".ld-line-content") as HTMLElement, d.content, d.parts);
     }
   }
@@ -1052,7 +1124,7 @@ export function initLangdiff(root: HTMLElement) {
     let changed = false;
     for (const [idx, row] of rowPool) {
       const d = diffLines[idx];
-      if (d.type === "file") continue;
+      if (d.type === "file" || d.type === "chunk") continue;
       let need = 0;
       if (d.type === "split") {
         for (const half of Array.from(row.children[3].children)) {
@@ -1157,7 +1229,7 @@ export function initLangdiff(root: HTMLElement) {
       const visualLines = len === 0 ? 1 : Math.ceil(len / (isSplit ? splitCpl : charsPerLine));
       const f = diffLines[i].file;
       const hidden = f !== undefined && f >= 0 && ((collapsed.has(f) && dl.type !== "file") || dl.type === "meta");
-      const h = hidden ? 0 : dl.type === "file" ? 34 : visualLines * LINE_HEIGHT_PX;
+      const h = hidden ? 0 : dl.type === "file" ? 34 : dl.type === "chunk" ? 32 : visualLines * LINE_HEIGHT_PX;
       rowHeights[i] = h;
       rowTops[i] = acc;
       acc += h;
@@ -1204,6 +1276,7 @@ export function initLangdiff(root: HTMLElement) {
     root.classList.toggle("ld-compare", on);
     textarea.placeholder = on ? "Paste text A (original) here..." : defaultPlaceholder;
     scheduleGutterUpdate();
+    updateMergeBar();
   }
   syncCompareButtons();
   splitBtn.addEventListener("click", () => {
@@ -1211,7 +1284,7 @@ export function initLangdiff(root: HTMLElement) {
     localStorage.setItem("langdiff_cmpview", compareView);
     syncCompareButtons();
     if (viewKind === "compare") {
-      diffLines = compareView === "split" ? toSplit(compareRows) : compareRows;
+      diffLines = compareDisplay();
       recomputeLayoutAndRerender();
     }
   });
@@ -1220,6 +1293,100 @@ export function initLangdiff(root: HTMLElement) {
     localStorage.setItem("langdiff_syntax", syntaxOn ? "1" : "0");
     syncCompareButtons();
     if (diffLines.length > 0) recomputeLayoutAndRerender();
+  });
+
+  // ---------- Merge (Compare mode) ----------
+
+  const mergeInfo = root.querySelector<HTMLElement>("#ld-merge-info")!;
+  const copyBtn = root.querySelector<HTMLButtonElement>("#ld-merge-copy")!;
+  const applyBtn = root.querySelector<HTMLButtonElement>("#ld-merge-apply")!;
+
+  function updateMergeBar() {
+    let a = 0;
+    let b = 0;
+    for (const v of chunkTake) {
+      if (v === 1) a++;
+      else if (v === 2) b++;
+    }
+    const total = chunkTake.length;
+    mergeInfo.textContent = viewKind !== "compare"
+      ? "Render View to compare"
+      : total === 0
+        ? "No differences"
+        : `${total} changes \u00b7 ${b} from B \u00b7 ${a} keep A \u00b7 ${total - a - b} undecided (copied as A)`;
+    copyBtn.disabled = viewKind !== "compare";
+    applyBtn.disabled = a + b === 0;
+  }
+
+  // Merged text = A with every change set to "Take B" replaced by B's version.
+  function mergedLines(): string[] {
+    const out: string[] = [];
+    for (const r of compareRows) {
+      if (r.chunk === undefined) out.push(r.content);
+      else if (r.type === "minus" ? chunkTake[r.chunk] !== 2 : chunkTake[r.chunk] === 2) out.push(r.content);
+    }
+    return out;
+  }
+
+  function setAllChunks(v: number) {
+    chunkTake.fill(v);
+    refreshMounted();
+    updateMergeBar();
+  }
+
+  viewerSpacer.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>(".ld-ch-btn");
+    if (!b) return;
+    const c = parseInt(b.dataset.chunk ?? "", 10);
+    const side = parseInt(b.dataset.side ?? "", 10);
+    chunkTake[c] = chunkTake[c] === side ? 0 : side;
+    refreshMounted();
+    updateMergeBar();
+  });
+
+  root.querySelector("#ld-take-all-b")!.addEventListener("click", () => setAllChunks(2));
+  root.querySelector("#ld-keep-all-a")!.addEventListener("click", () => setAllChunks(1));
+  root.querySelector("#ld-merge-reset")!.addEventListener("click", () => setAllChunks(0));
+
+  copyBtn.addEventListener("click", async () => {
+    const text = mergedLines().join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    copyBtn.textContent = "Copied \u2713";
+    setTimeout(() => { copyBtn.textContent = "Copy merged"; }, 1200);
+  });
+
+  // Apply: decided changes become identical in both inputs; undecided ones stay different.
+  applyBtn.addEventListener("click", () => {
+    const decided = chunkTake.reduce((n, v) => n + (v ? 1 : 0), 0);
+    if (!decided) return;
+    if (!confirm(`Apply ${decided} decision(s)? Text A and Text B will be made identical at those places.`)) return;
+    const A: string[] = [];
+    const B: string[] = [];
+    for (const r of compareRows) {
+      if (r.chunk === undefined) { A.push(r.content); B.push(r.content); continue; }
+      const st = chunkTake[r.chunk];
+      if (st === 0) (r.type === "minus" ? A : B).push(r.content);
+      else if (r.type === "minus") { if (st === 1) { A.push(r.content); B.push(r.content); } }
+      else if (st === 2) { A.push(r.content); B.push(r.content); }
+    }
+    if (compareUsedSep) {
+      resetDocumentAndWindow(A.join("\n") + "\n===\n" + B.join("\n"));
+    } else {
+      resetDocumentAndWindow(A.join("\n"));
+      bBox.value = B.join("\n");
+      localStorage.setItem("langdiff_b", bBox.value);
+      updateBGutter();
+    }
+    processText();
   });
 
   // ---------- Patch navigation: file bar, file list, hunks, collapse ----------
