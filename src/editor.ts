@@ -1,17 +1,39 @@
-import { basicSetup } from "codemirror";
 import { Compartment, EditorState, StateEffect, StateField, type Extension } from "@codemirror/state";
 import {
   Decoration,
   EditorView,
+  crosshairCursor,
+  drawSelection,
+  dropCursor,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
   highlightTrailingWhitespace,
   keymap,
+  lineNumbers,
   placeholder as placeholderExt,
+  rectangularSelection,
   type DecorationSet,
 } from "@codemirror/view";
-import { indentWithTab } from "@codemirror/commands";
-import { StreamLanguage } from "@codemirror/language";
-import { completeAnyWord } from "@codemirror/autocomplete";
-import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import {
+  StreamLanguage,
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  indentOnInput,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import {
+  autocompletion,
+  closeBrackets,
+  closeBracketsKeymap,
+  completeAnyWord,
+  completionKeymap,
+} from "@codemirror/autocomplete";
+import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
+import { linter, lintGutter, lintKeymap, type Diagnostic } from "@codemirror/lint";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { html } from "@codemirror/lang-html";
@@ -133,6 +155,8 @@ const layoutTheme = EditorView.theme({
     lineHeight: "21px",
   },
   "&.cm-focused": { outline: "none" },
+  ".cm-trailingSpace": { backgroundColor: "rgba(207, 34, 46, 0.12)" },
+  ".cm-activeLine .cm-trailingSpace": { backgroundColor: "transparent" },
 });
 
 const lightTheme = EditorView.theme({
@@ -143,6 +167,45 @@ const lightTheme = EditorView.theme({
   ".cm-activeLine": { backgroundColor: "rgba(9, 105, 218, 0.06)" },
   ".cm-activeLineGutter": { backgroundColor: "#eaeef2", color: "#24292f" },
 });
+
+// Centered chevron instead of the default text glyph (which sits below the baseline).
+function foldMarker(open: boolean): HTMLElement {
+  const el = document.createElement("span");
+  el.className = open ? "ld-fold" : "ld-fold ld-fold-closed";
+  el.innerHTML =
+    '<svg viewBox="0 0 16 16" width="12" height="12"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return el;
+}
+
+const coreSetup: Extension = [
+  lineNumbers(),
+  highlightActiveLineGutter(),
+  highlightSpecialChars(),
+  history(),
+  foldGutter({ markerDOM: foldMarker }),
+  drawSelection(),
+  dropCursor(),
+  EditorState.allowMultipleSelections.of(true),
+  indentOnInput(),
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+  bracketMatching(),
+  closeBrackets(),
+  autocompletion(),
+  rectangularSelection(),
+  crosshairCursor(),
+  highlightActiveLine(),
+  highlightSelectionMatches(),
+  search({ top: true }),
+  keymap.of([
+    ...closeBracketsKeymap,
+    ...defaultKeymap,
+    ...searchKeymap,
+    ...historyKeymap,
+    ...foldKeymap,
+    ...completionKeymap,
+    ...lintKeymap,
+  ]),
+];
 
 export interface Editor {
   view: EditorView;
@@ -175,9 +238,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Editor {
     state: EditorState.create({
       doc: opts.doc,
       extensions: [
-        // line numbers, active line, special chars, history, fold gutter, bracket matching,
-        // close brackets, autocomplete, multiple selections, search + lint + fold keymaps...
-        basicSetup,
+        coreSetup,
         keymap.of([indentWithTab]),
         highlightTrailingWhitespace(),
         EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
@@ -193,6 +254,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Editor {
     }),
   });
 
+  parent.classList.toggle("ld-cm-dark", opts.dark);
+
   return {
     view,
     getText: () => view.state.doc.toString(),
@@ -203,6 +266,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Editor {
       view.dispatch({ effects: langC.reconfigure(langFor(id)) });
     },
     setDark(dark) {
+      parent.classList.toggle("ld-cm-dark", dark);
       view.dispatch({ effects: themeC.reconfigure(themeFor(dark)) });
     },
     setPlaceholder(text) {
