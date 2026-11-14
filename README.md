@@ -1,73 +1,88 @@
-## Langdiff - Bilingual Markdown Viewer
+# Langdiff — Advanced Bilingual & Code Diff Viewer
 
-Langdiff is a lightweight, full-screen web application tailored for language learners and developers to read bilingual texts or side-by-side code variations. By parsing a single document using simple prefixes (+ and -), it creates a clean, Git-inspired alignment interface without causing horizontal structural gaps or messy alignment mismatches.
+**Langdiff** is a high-performance, full-screen web application tailored for language learners and developers to read bilingual texts, review native Git patches, or resolve code conflicts side-by-side. 
 
-------------------------------
+Powered by a **dual-sided sliding-window virtualization engine** and dynamic DOM layout measurement, Langdiff effortlessly displays hundreds of thousands of lines without UI stuttering, horizontal alignment gaps, or layout skew—even under rapid fling-scrolling or complex IME text compositions like Vietnamese Telex.
 
-## 📝 Syntax Rules
-Langdiff analyzes text line-by-line based on the prefix character found at the absolute start of each line:
+---
+
+## ⚡ Core Operational Modes
+
+Langdiff features an Intelligent Auto-Detection system on the toolbar that instantly switches behavior based on your input:
+
+### 1. 🌐 Bilingual Mode (Default)
+Parses a single source document using simple prefix characters (`-` and `+`) to create a fluid, Git-like side-by-side reading layout optimized for language translation or quick text changes.
+
+### 2. 🛠️ Native Patch / Diff Mode
+Triggered automatically when standard Git metadata (e.g., `diff --git`, `@@ -a,b +c,d @@`) is detected. 
+* **True Line Numbering:** Extracts real hunk header ranges so line grids match your actual repository history instead of global file indices.
+* **Ergonomic File Panel:** Accessible via the **Files** button or by pressing `f`. Includes real-time fuzzy text filtering, modification counters (`+N / -M`), and dynamic pinned headers displaying file states (Added, Deleted, Modified, Renamed).
+* **Code Folding:** Click a file name block or press `c` to instantly collapse or expand it.
+* **Granular Word Diff:** Groups paired deletion and insertion streams, cross-checking tokens with a ≥ 40% content similarity formula to inject bold, intra-line word-level highlights.
+
+### 3. ⚖️ Compare Mode (`A === B`)
+Triggered automatically when a document contains a three-equals-sign separator (`===`) or when selected via the toolbar.
+* **True Dual-Pane Inputs:** Splits the input layout into two distinct, persistent buffer zones: **Text A (Original)** and **Text B (Modified)**, complete with fully synchronized dynamic line gutters.
+* **Interactive Conflict Engine:** Flags distinct variations with custom `"Change N · −x +y"` headers. Features inline `Keep A` and `Take B` action controls that instantly dim and strikethrough rejected text structures.
+* **Bulk Resolution:** Master ribbon containing `Take all B`, `Keep all A`, and `Reset` selectors, backed by a live counter.
+* **Buffer Rewriting:** Clicking `Apply Merge` safely strips platform newline anomalies (`\r`), standardizes spacing, and synchronizes both raw inputs into matching unified buffers.
+* **Instant Clipboard Export:** Quick `Copy Merged` action button immediately captures your finalized resolution data.
+
+---
+
+## 📝 Bilingual Mode Syntax Rules
+
+Text is processed line-by-line using prefix markers placed at the absolute start of each row:
 
 | Prefix | Row Appearance | Index Grid Coverage | Ideal Use Case |
-|---|---|---|---|
-| - | Red Row Background | Left Line Numbers Only | Original Language (e.g., Vietnamese) / Old Code |
-| + | Green Row Background | Right Line Numbers Only | Target Language (e.g., English) / Updated Code |
-| None | Standard White Row | Both Columns Line Numbers | Context Dividers / Shared Descriptive Explanations |
+| :---: | | | |
+| **`-`** | Red Row Background | Left Line Numbers Only | Original Language (e.g., Vietnamese) / Old Code |
+| **`+`** | Green Row Background | Right Line Numbers Only | Target Language (e.g., English) / Updated Code |
+| *None* | Standard White Row | Both Columns Line Numbers | Context Dividers / Shared Descriptive Explanations |
 
-------------------------------
+---
 
-## 🚀 Usage & Formatting Guide
-The custom rendering engine operates on a strict, predictable rule: Every row beginning with + or - will have the prefix symbol AND EXACTLY ONE white space immediately following it stripped away.
+## 🚀 Usage & Formatting Guide (Bilingual Mode)
 
-Any subsequent whitespace characters or indentation configurations located after that first stripped space are treated as intentional data and will be preserved exactly as written.
+The layout rendering core follows a strict parsing rule: **Every row starting with `+` or `-` will have the prefix character AND EXACTLY ONE trailing white space stripped away.** Any subsequent whitespaces or tab indentations are fully preserved as intentional syntax formatting.
 
-## 📐 Understanding the Alignment Mechanics
-To guarantee your layout compiles cleanly and code blocks (like Python scripts) don't lose their logical indentation, look at how the calculation behaves:
-
-## ❌ Incorrect Formatting (Misunderstanding the Strip Rule)
-If you paste raw Git diffs where prefixes are directly stuck to the text without a following space, or if you write uneven spacing:
-
+### ❌ Incorrect Formatting (Breaks Indentation)
+Do not stick prefixes directly to text without a trailing space, and avoid uneven whitespace configurations:
 ```text
 -def compute_total():
 +def compute_total():
 -    print("Old code")
 +    print("New code")
 ```
+* **Why it fails:** On line 4, the parser swallows the `+` and the *first* indentation space, leaving only 3 leading spaces in your rendering container. This completely breaks language runtime trees like Python!
 
-* Why this breaks:
-   * On line 2, the row starts with +d. There is no space following the +. The engine removes +, leaving def compute_total(): with 0 leading spaces (Correct).
-   * On line 4, the row starts with + followed by 4 indentation spaces. The engine catches the + and swallows the 1st space, leaving only 3 leading spaces on your screen. This completely breaks Python's syntax tree!
-
-## ✅ Correct Formatting (Intentionally Planning for the Strip Rule)
-To make your content match up beautifully, you must explicitly type exactly ONE single space directly behind every + or - symbol, followed by your actual content or normal code indentation.
-
+### ✅ Correct Formatting (Preserves Indentation)
+Explicitly type exactly **ONE** single space directly behind every `+` or `-` symbol before writing your normal code/text indentation:
 ```text
 - def compute_total():
 + def compute_total():
 -     print("Old code")
 +     print("New code")
 ```
+* **Why it works flawlessly:** On line 4, the parser strips the `+` and the single trailing space (`+ `). The remaining string retains exactly 4 spaces of indentation, rendering perfectly on screen.
 
-* Why this works flawlessly:
-   * Line 2 (+ def...): The engine strips the + and the single trailing space (+ ). The remaining string is def compute_total(): $\rightarrow$ Rendered with 0 spaces of indentation.
-   * Line 4 (+ print...): The row is written with a +, a single space, and then the 4-space code indent (totaling 5 spaces in your raw file). The engine strips the + and the 1st space (+ ). The remaining string is print("New code") $\rightarrow$ Rendered with exactly 4 spaces of indentation!
+---
 
-## 💡 General Text Rule (Language Learning)
-The same logic applies to text paragraphs. Always put exactly one space after the symbol so your sentences sit flush against the margin:
+## 🎹 Navigation & Accessibility Hotkeys
 
-```
-- Tôi đang sử dụng ứng dụng Langdiff.
-+ I am using the Langdiff application.
-```
+* **`f`** : Toggle the floating Files Panel browser.
+* **`Esc`** : Instantly dismiss the Files Panel.
+* **`j` / `k`** : Jump focus sequentially between diff Hunks (displays a persistent high-contrast focus border).
+* **`[` / `]`** : Jump focus sequentially between files (automatically expands collapsed blocks and targets the new header).
+* **`c`** : Collapse or expand the currently focused file container block.
 
-* Result: The engine strips - and + , making both languages align straight against the edge.
+---
 
-------------------------------
+## 🛠️ Step-by-Step Workspace Workflow
 
-## 🛠️ Step-by-Step User Workflow
-
-   1. Draft your Document: Create a native plain text file (.txt) or standard Markdown document (.md) on your local machine.
-   2. Organize Content: Place your target translation strings or code modifications directly underneath their respective reference sentences using the exact + and - rules outlined above.
-   3. Import to Langdiff:
-      * Drag & Drop: Pick up your file from your desktop and drag it anywhere over the active web container layout.
-      * Manual Paste: Click "Toggle Input" on the top bar, paste your raw text into the box, and click "Render View".
-   4. Auto-Save Lifecycle: You can close the browser tab or refresh safely. Your active workspace stays cached inside the browser's native LocalStorage.
+1. **Draft Document:** Create a native plain text file (`.txt`), standard Markdown document (`.md`), or standard patch file (`.patch`/`.diff`) locally.
+2. **Organize Text:** Apply the standard prefix guidelines or dập files directly out of a Git workflow.
+3. **Import to Langdiff:**
+   * **Drag & Drop:** Drop your file anywhere over the active web container layout.
+   * **Manual Input:** Toggle the panel, fill out the Text A & B inputs, and click **Render View**.
+4. **Auto-Save Lifecycle:** Refresh or close tabs safely. All ongoing sessions are cached locally inside your browser's persistent `LocalStorage` container.
