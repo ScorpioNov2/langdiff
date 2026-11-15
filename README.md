@@ -14,10 +14,10 @@ Langdiff features an Intelligent Auto-Detection system on the toolbar that insta
 Parses a single source document using simple prefix characters (`-` and `+`) to create a fluid, Git-like side-by-side reading layout optimized for language translation or quick text changes.
 
 ### 2. 🛠️ Native Patch / Diff Mode
-Triggered automatically when standard Git metadata (e.g., `diff --git`, `@@ -a,b +c,d @@`) is detected. 
+Triggered automatically when standard Git metadata (e.g., `diff --git`, `@@ -a,b +c,d @@`) or a `.patch`/`.diff` file is loaded. 
 * **True Line Numbering:** Extracts real hunk header ranges so line grids match your actual repository history instead of global file indices.
-* **Ergonomic File Panel:** Accessible via the **Files** button or by pressing `f`. Includes real-time fuzzy text filtering, modification counters (`+N / -M`), and dynamic pinned headers displaying file states (Added, Deleted, Modified, Renamed).
-* **Code Folding:** Click a file name block or press `c` to instantly collapse or expand it.
+* **Ergonomic File Panel:** Accessible via the **Files** button or by pressing `f`. Includes real-time fuzzy text filtering, modification counters (`+N / -M`), an inline dismiss `×` button, and dynamic pinned headers. Selecting a collapsed file automatically expands it before targeting.
+* **Code Folding:** Click a file name block or press `c` to instantly collapse or expand it. Center-aligned SVG arrows visually rotate to indicate open/closed status.
 * **Granular Word Diff:** Groups paired deletion and insertion streams, cross-checking tokens with a ≥ 40% content similarity formula to inject bold, intra-line word-level highlights.
 
 ### 3. ⚖️ Compare Mode (`A === B`)
@@ -30,21 +30,17 @@ Triggered automatically when a document contains a three-equals-sign separator (
 
 ---
 
-## 📝 Bilingual Mode Syntax Rules
+## 📝 Syntax & Formatting Rules (Bilingual Mode)
 
-Text is processed line-by-line using prefix markers placed at the absolute start of each row:
+The rendering engine follows one strict rule: **Every row beginning with `+` or `-` has the prefix symbol AND exactly one following space stripped.** Indentation spaces after that first stripped space are preserved exactly.
 
-| Prefix | Row Appearance | Index Grid Coverage | Ideal Use Case |
-| :---: | | | |
-| **`-`** | Red Row Background | Left Line Numbers Only | Original Language (e.g., Vietnamese) / Old Code |
-| **`+`** | Green Row Background | Right Line Numbers Only | Target Language (e.g., English) / Updated Code |
-| *None* | Standard White Row | Both Columns Line Numbers | Context Dividers / Shared Descriptive Explanations |
+### Prefix & Grid Coverage
 
----
-
-## 🚀 Usage & Formatting Guide (Bilingual Mode)
-
-The layout rendering core follows a strict parsing rule: **Every row starting with `+` or `-` will have the prefix character AND EXACTLY ONE trailing white space stripped away.** Any subsequent whitespaces or tab indentations are fully preserved as intentional syntax formatting.
+| Prefix | Row Appearance | Ideal Use Case |
+| :---: | | |
+| **`- `** | Red Background | Original language / old code |
+| **`+ `** | Green Background | Target language / updated code |
+| *(2 spaces)* | Standard row | Context / shared description |
 
 ### ❌ Incorrect Formatting (Breaks Indentation)
 Do not stick prefixes directly to text without a trailing space, and avoid uneven whitespace configurations:
@@ -56,33 +52,58 @@ Do not stick prefixes directly to text without a trailing space, and avoid uneve
 ```
 * **Why it fails:** On line 4, the parser swallows the `+` and the *first* indentation space, leaving only 3 leading spaces in your rendering container. This completely breaks language runtime trees like Python!
 
-### ✅ Correct Formatting (Preserves Indentation)
-Explicitly type exactly **ONE** single space directly behind every `+` or `-` symbol before writing your normal code/text indentation:
+### ✅ Correct Formatting Example
 ```text
-- def compute_total():
-+ def compute_total():
--     print("Old code")
-+     print("New code")
+  This is a standard row using 2 leading spaces.
+- I am using the Langdiff application in Vietnamese.
++ I am using the Langdiff application in English.
 ```
-* **Why it works flawlessly:** On line 4, the parser strips the `+` and the single trailing space (`+ `). The remaining string retains exactly 4 spaces of indentation, rendering perfectly on screen.
+* **Result:** The engine strips the `- ` and `+ ` prefix tokens, making both languages align flush against the edge while standard text blocks retain their exact positioning.
+
+---
+
+## 🎨 Modern Workspace UI & Logic
+
+### 🎛️ Two-Tier Responsive Toolbar (`ld-controls`)
+The header control layout is structured into two persistent vertical layers to handle extensive code stats without button overlapping:
+* **Row 1 (Top Tier):** Anchors the brand logo on the far left and binds core action links (`Theme`, `Split View`, `Syntax`, `Find`, `Usage`, `Choose File`, `Toggle Input`, and `Render View`) flush against the right margin. `Render View` acts as a locked anchor at the extreme right.
+* **Row 2 (Bottom Tier):** Extends across the full width. It positions dynamic metadata statistics (`Compare · A ... lines · B ... lines`) on the far left beneath the logo. Dropdown controls are locked to the right margin, placing the **Mode Selector** directly beneath the `Render View` button, and the **Language Selector** directly to its left.
+
+### 🔍 IDE-Grade Search Panel (`Ctrl + F`)
+Relocates CodeMirror's search interface to a modern, top-aligned, two-row overlay panel:
+* **Row 1:** Groups `Find` input, navigation controls (`Next`/`Previous`), and `All` filters.
+* **Row 2:** Houses `Replace` text inputs and execution controls.
+* Replaces rigid checkboxes with sleek icon toggle micro-buttons for case matching (`Aa`), Regex (`.*`), and word boundaries (`ab`), styled dynamically to match dark/light canvases.
+
+### 🧠 Trailing Whitespace Highlighting & Gutter Alignment
+* **Active Line Protection:** Instantly disables aggressive red warning backgrounds on the current active cursor line, allowing clean real-time typing and fluid `Enter` line breaks without immediate error feedback.
+* **Vertical Parity:** Code folding triggers and error markers are geometrically centered to guarantee vertical structural alignment with gutter line numbers.
+
+### 🛎️ Accessible Pop-up Dialog Modals
+Completely replaces standard browser alert/confirm prompts with customized accessible modal components. Supports instant `Esc` dismissal, interactive `Tab` choice toggles, automatic confirmation focus bounds, and precise post-dismissal cursor tracking.
+
+### 🌑 Full-Page Dark Mode Integration
+Propagates selected light/dark states across the entire system ecosystem including toolbars, select panels, search nodes, file utilities, layout rows, internal modal popups, and custom rounded scrollbars.
 
 ---
 
 ## 🎹 Navigation & Accessibility Hotkeys
 
-* **`f`** : Toggle the floating Files Panel browser.
-* **`Esc`** : Instantly dismiss the Files Panel.
-* **`j` / `k`** : Jump focus sequentially between diff Hunks (displays a persistent high-contrast focus border).
-* **`[` / `]`** : Jump focus sequentially between files (automatically expands collapsed blocks and targets the new header).
-* **`c`** : Collapse or expand the currently focused file container block.
+*(Note: Hotkeys are active only when your input focus is not inside an active text field)*
+
+* **`f`** : Toggle the floating Files Panel browser list.
+* **`Esc`** : Instantly dismiss the Files Panel or Close Active Dialogs.
+* **`j` / `k`** : Jump focus sequentially to the next / previous diff Hunk (displays an interior focus border).
+* **`[` / `]`** : Jump focus sequentially to the next / previous File (automatically expands collapsed blocks and targets the new header).
+* **`c`** : Fold or unfold the current file container block. (Clicking a file row also folds it).
 
 ---
 
 ## 🛠️ Step-by-Step Workspace Workflow
 
 1. **Draft Document:** Create a native plain text file (`.txt`), standard Markdown document (`.md`), or standard patch file (`.patch`/`.diff`) locally.
-2. **Organize Text:** Apply the standard prefix guidelines or dập files directly out of a Git workflow.
+2. **Organize Text:** Apply the standard prefix guidelines or generate files directly out of a Git workflow.
 3. **Import to Langdiff:**
-   * **Drag & Drop:** Drop your file anywhere over the active web container layout.
-   * **Manual Input:** Toggle the panel, fill out the Text A & B inputs, and click **Render View**.
+   * **Drag & Drop:** Drop your file from your desktop anywhere over the active web container layout.
+   * **Manual Input:** Toggle the panel, fill out the Text A & B inputs, and click **Render View**. Empty inputs are rendered directly to allow workspace cleanups.
 4. **Auto-Save Lifecycle:** Refresh or close tabs safely. All ongoing sessions are cached locally inside your browser's persistent `LocalStorage` container.
