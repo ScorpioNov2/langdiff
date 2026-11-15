@@ -1088,3 +1088,32 @@ body.ld-drag-active .ld-drag-overlay {
 .ld-fold:hover { color: var(--sp-fg); }
 .ld-fold-closed svg { transform: rotate(-90deg); }
 .ld-cm .cm-lint-marker { width: 0.8em; height: 0.8em; }
+
+/* ---------- Header: controls stay pinned to the right, Render View is the anchor ---------- */
+.ld-header { column-gap: 12px; }
+.ld-brand { flex-shrink: 0; }
+.ld-controls { margin-left: auto; justify-content: flex-end; min-width: 0; }
+.ld-mode-info { max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Header: buttons pinned top-right beside the logo, status + selects on a second row ---------- */
+.ld-header { align-items: flex-start; }
+.ld-brand { min-height: 30px; }
+.ld-controls {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.ld-controls-main,
+.ld-controls-sub {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ld-mode-info { max-width: 360px; }
+
+/* ---------- Header row 2 spans the full width: status on the left, language + mode selects on the right ---------- */
+.ld-controls-sub { flex: 1 1 100%; justify-content: space-between; }
+.ld-sub-selects { display: flex; align-items: center; gap: 8px; margin-left: auto; }

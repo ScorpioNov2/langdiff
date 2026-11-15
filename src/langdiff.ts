@@ -446,14 +446,7 @@ export function initLangdiff(root: HTMLElement) {
         <span>Langdiff</span>
       </div>
       <div class="ld-controls">
-        <span class="ld-mode-info" id="ld-mode-info" data-testid="text-mode-info"></span>
-        <select class="ld-select" id="ld-mode" title="Parse mode" data-testid="select-mode">
-          <option value="auto">Auto</option>
-          <option value="bilingual">Bilingual (- / +)</option>
-          <option value="patch">Patch / diff</option>
-          <option value="compare">Compare (A === B)</option>
-        </select>
-        <select class="ld-select" id="ld-lang" title="Editor language" data-testid="select-language"></select>
+        <div class="ld-controls-main">
         <button class="ld-btn" id="ld-theme-btn" title="Editor theme" data-testid="button-theme">Theme: Light</button>
         <button class="ld-btn ld-cmp-only" id="ld-split-btn" data-testid="button-split-view">Split view</button>
         <button class="ld-btn ld-cmp-only" id="ld-syntax-btn" data-testid="button-syntax">Syntax: off</button>
@@ -480,6 +473,19 @@ export function initLangdiff(root: HTMLElement) {
           <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8.3 0a.75.75 0 0 1 .718.528l2.5 7.5A.75.75 0 0 1 10.8 9H7.5l1.372 6.173a.75.75 0 0 1-1.32.593l-5.5-7.5A.75.75 0 0 1 2.5 7h3.3L4.427.528A.75.75 0 0 1 5.15 0H8.3Z"></path></svg>
           <span>Render View</span>
         </button>
+        </div>
+      </div>
+      <div class="ld-controls-sub">
+        <span class="ld-mode-info" id="ld-mode-info" data-testid="text-mode-info"></span>
+        <div class="ld-sub-selects">
+        <select class="ld-select" id="ld-lang" title="Editor language" data-testid="select-language"></select>
+        <select class="ld-select" id="ld-mode" title="Parse mode" data-testid="select-mode">
+          <option value="auto">Auto</option>
+          <option value="bilingual">Bilingual (- / +)</option>
+          <option value="patch">Patch / diff</option>
+          <option value="compare">Compare (A === B)</option>
+        </select>
+        </div>
       </div>
     </header>
     <div class="ld-search-bar" id="ld-search-bar">
@@ -1046,12 +1052,14 @@ export function initLangdiff(root: HTMLElement) {
   }
 
   function processText() {
+    // Always render what the inputs hold now, including nothing: an empty input must clear the view.
     const rawText = editorA.getText();
-    if (!rawText.trim()) return;
-
     localStorage.setItem(STORAGE_KEY, rawText);
-    viewerEmpty.style.display = "none";
     diffLines = parseDiff(rawText.split("\n"));
+    modeInfo.title = modeInfo.textContent ?? ""; // full text on hover when the pill is truncated
+    const nothing = !rawText.trim() && !(viewKind === "compare" && editorB.getText().trim());
+    if (nothing) diffLines = [];
+    viewerEmpty.style.display = diffLines.length === 0 ? "" : "none";
     collapsed.clear();
     buildFileList();
     syncCompareUi();
@@ -1630,5 +1638,5 @@ export function initLangdiff(root: HTMLElement) {
   });
 
   syncCompareUi();
-  if (editorA.getText()) processText();
+  processText();
 }
