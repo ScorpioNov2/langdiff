@@ -1117,3 +1117,151 @@ body.ld-drag-active .ld-drag-overlay {
 /* ---------- Header row 2 spans the full width: status on the left, language + mode selects on the right ---------- */
 .ld-controls-sub { flex: 1 1 100%; justify-content: space-between; }
 .ld-sub-selects { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* ---------- App dialog ---------- */
+.ld-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(27, 31, 36, 0.5);
+  backdrop-filter: blur(2px);
+}
+.ld-dialog {
+  width: min(420px, 92vw);
+  padding: 20px 22px 18px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(27, 31, 36, 0.28);
+  animation: ld-dialog-pop 0.14s ease-out;
+}
+.ld-dialog-title { margin-bottom: 8px; font-size: 15px; font-weight: 600; color: #24292f; }
+.ld-dialog-message { margin-bottom: 18px; font-size: 13px; line-height: 1.55; color: #57606a; }
+.ld-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.ld-dialog-actions .ld-btn { height: 30px; padding: 0 14px; }
+@keyframes ld-dialog-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Dark theme for the whole page (generated from the light palette above) ---------- */
+.ld-root.ld-dark { color: #d7dae0; background-color: #2b3038; }
+.ld-root.ld-dark .ld-drag-overlay { color: #56d364; }
+.ld-root.ld-dark .ld-header { border-bottom: 1px solid #3a3f4b; background-color: #262b33; }
+.ld-root.ld-dark .ld-brand { color: #d7dae0; }
+.ld-root.ld-dark .ld-btn { color: #d7dae0; background-color: #2b3038; border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-btn:hover { background-color: #353c46; }
+.ld-root.ld-dark .ld-btn-primary { background-color: #2da44e; border-color: rgba(27, 31, 36, 0.15); color: #ffffff; }
+.ld-root.ld-dark .ld-btn-primary:hover { background-color: #2c974b; }
+.ld-root.ld-dark .ld-editor-container { border-right: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-editor-line-numbers { background-color: #262b33; border-right: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-gutter-row { color: #7d8799; }
+.ld-root.ld-dark .ld-input-area { color: #d7dae0; background-color: #2b3038; }
+.ld-root.ld-dark .ld-viewer-empty { color: #7d8799; }
+.ld-root.ld-dark .ld-diff-line.ld-minus { background-color: rgba(248, 81, 73, 0.16); }
+.ld-root.ld-dark .ld-diff-line.ld-plus { background-color: rgba(46, 160, 67, 0.18); }
+.ld-root.ld-dark .ld-line-numbers { color: #7d8799; }
+.ld-root.ld-dark .ld-diff-line.ld-minus .ld-num-old { color: #ff7b72; }
+.ld-root.ld-dark .ld-diff-line.ld-plus .ld-num-new { color: #56d364; }
+.ld-root.ld-dark .ld-line-separator { background-color: #3a3f4b; }
+.ld-root.ld-dark .ld-line-content { color: #d7dae0; }
+.ld-root.ld-dark .ld-diff-line.ld-minus .ld-line-content { color: #ffa198; }
+.ld-root.ld-dark .ld-diff-line.ld-plus .ld-line-content { color: #7ee787; }
+.ld-root.ld-dark .ld-diff-line.ld-file { background-color: rgba(56, 139, 253, 0.18); border-top: 1px solid rgba(56, 139, 253, 0.4); }
+.ld-root.ld-dark .ld-diff-line.ld-file .ld-line-content { color: #79c0ff; }
+.ld-root.ld-dark .ld-diff-line.ld-hunk { background-color: #262b33; }
+.ld-root.ld-dark .ld-diff-line.ld-hunk .ld-line-content { color: #9ba3b0; }
+.ld-root.ld-dark .ld-diff-line.ld-meta .ld-line-content,
+.ld-root.ld-dark .ld-diff-line.ld-noeol .ld-line-content { color: #7d8799; }
+.ld-root.ld-dark .ld-mode-info { color: #9ba3b0; }
+.ld-root.ld-dark .ld-select { color: #d7dae0; background-color: #2b3038; border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-modal-overlay { background-color: rgba(0, 0, 0, 0.65); }
+.ld-root.ld-dark .ld-modal-card { background-color: #2b3038; border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-modal-close-btn { color: #9ba3b0; }
+.ld-root.ld-dark .ld-modal-close-btn:hover { background-color: #353c46; }
+.ld-root.ld-dark .ld-modal-header h3 { color: #d7dae0; }
+.ld-root.ld-dark .ld-modal-intro { color: #9ba3b0; }
+.ld-root.ld-dark .ld-modal-intro code { background-color: #262b33; }
+.ld-root.ld-dark .ld-modal-section-title { color: #7d8799; }
+.ld-root.ld-dark .ld-modal-table th,
+.ld-root.ld-dark .ld-modal-table td { border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-modal-table th { background-color: #262b33; }
+.ld-root.ld-dark .ld-modal-table code { background-color: #262b33; }
+.ld-root.ld-dark .ld-badge-red { background-color: rgba(248, 81, 73, 0.16); color: #ff7b72; }
+.ld-root.ld-dark .ld-badge-green { background-color: rgba(46, 160, 67, 0.18); color: #56d364; }
+.ld-root.ld-dark .ld-modal-body pre { background-color: #262b33; border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-search-bar { background-color: #262b33; border-bottom: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-search-icon { color: #9ba3b0; }
+.ld-root.ld-dark .ld-search-input { border: 1px solid #3a3f4b; background-color: #2b3038; }
+.ld-root.ld-dark .ld-search-input:focus { border-color: #4493f8; box-shadow: 0 0 0 3px rgba(68, 147, 248, 0.3); }
+.ld-root.ld-dark .ld-search-count { color: #9ba3b0; }
+.ld-root.ld-dark .ld-search-nav-btn { border: 1px solid #3a3f4b; background-color: #2b3038; color: #d7dae0; }
+.ld-root.ld-dark .ld-search-nav-btn:hover { background-color: #353c46; }
+.ld-root.ld-dark .ld-search-divider { background-color: #3a3f4b; }
+.ld-root.ld-dark .ld-search-goto-label { color: #9ba3b0; }
+.ld-root.ld-dark .ld-goto-input { border: 1px solid #3a3f4b; background-color: #2b3038; }
+.ld-root.ld-dark .ld-goto-input:focus { border-color: #4493f8; box-shadow: 0 0 0 3px rgba(68, 147, 248, 0.3); }
+.ld-root.ld-dark .ld-search-close { color: #9ba3b0; }
+.ld-root.ld-dark .ld-search-close:hover { color: #d7dae0; }
+.ld-root.ld-dark .ld-filebar { background-color: #262b33; border-bottom: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-fb-stats { color: #9ba3b0; }
+.ld-root.ld-dark .ld-fs-A { background-color: rgba(46, 160, 67, 0.24); color: #7ee787; }
+.ld-root.ld-dark .ld-fs-D { background-color: rgba(248, 81, 73, 0.16); color: #ffa198; }
+.ld-root.ld-dark .ld-fs-M { background-color: rgba(210, 153, 34, 0.28); color: #e3b341; }
+.ld-root.ld-dark .ld-fs-R { background-color: rgba(56, 139, 253, 0.18); color: #79c0ff; }
+.ld-root.ld-dark .ld-files-panel { background-color: #2b3038; border: 1px solid #3a3f4b; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+.ld-root.ld-dark .ld-files-head { border-bottom: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-file-item { color: #d7dae0; }
+.ld-root.ld-dark .ld-file-item:hover { background-color: #262b33; }
+.ld-root.ld-dark .ld-file-item.ld-file-active { background-color: rgba(56, 139, 253, 0.18); }
+.ld-root.ld-dark .ld-half-r { border-left: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-hn { color: #7d8799; }
+.ld-root.ld-dark .ld-hc { color: #d7dae0; }
+.ld-root.ld-dark .ld-half.ld-minus { background-color: rgba(248, 81, 73, 0.16); }
+.ld-root.ld-dark .ld-half.ld-minus .ld-hc { color: #ffa198; }
+.ld-root.ld-dark .ld-half.ld-plus { background-color: rgba(46, 160, 67, 0.18); }
+.ld-root.ld-dark .ld-half.ld-plus .ld-hc { color: #7ee787; }
+.ld-root.ld-dark .ld-half.ld-empty { background-color: #262b33; }
+.ld-root.ld-dark .ld-minus .ld-wd { background-color: rgba(248, 81, 73, 0.42); }
+.ld-root.ld-dark .ld-plus .ld-wd { background-color: rgba(46, 160, 67, 0.45); }
+.ld-root.ld-dark .ld-tk1 { color: #8b93a1; }
+.ld-root.ld-dark .ld-tk2 { color: #a5d6ff; }
+.ld-root.ld-dark .ld-tk3 { color: #79c0ff; }
+.ld-root.ld-dark .ld-tk4 { color: #ff7b72; }
+.ld-root.ld-dark .ld-mode-info { background-color: #333a44; color: #9ba3b0; }
+.ld-root.ld-dark .ld-select { background-color: #2b3038; }
+.ld-root.ld-dark .ld-select:hover { background-color: #353c46; }
+.ld-root.ld-dark .ld-filebar { border-bottom: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-add { color: #56d364; }
+.ld-root.ld-dark .ld-del { color: #ff7b72; }
+.ld-root.ld-dark .ld-diff-line.ld-file { background-color: #232a35; border-top: 1px solid #323a46; border-bottom: 1px solid #323a46; box-shadow: inset 3px 0 0 #4493f8; }
+.ld-root.ld-dark .ld-diff-line.ld-file:hover { background-color: #2a3340; }
+.ld-root.ld-dark .ld-diff-line.ld-file .ld-line-content { color: #e6e9ef; }
+.ld-root.ld-dark .ld-fr-chev { color: #9ba3b0; }
+.ld-root.ld-dark .ld-diff-line.ld-hunk { background-color: #232a35; }
+.ld-root.ld-dark .ld-diff-line.ld-hunk .ld-line-content { color: #9ba3b0; }
+.ld-root.ld-dark .ld-left-col { border-right: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-b-pane { border-top: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-pane-title { color: #9ba3b0; background-color: #262b33; border-bottom: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-b-nums { color: #7d8799; }
+.ld-root.ld-dark .ld-diff-line.ld-nav-active { box-shadow: inset 0 0 0 2px #d4a72c; }
+.ld-root.ld-dark .ld-diff-line.ld-file.ld-nav-active { box-shadow: inset 0 0 0 2px #d4a72c, inset 3px 0 0 #4493f8; }
+.ld-root.ld-dark .ld-mergebar { background-color: #2b2820; border-bottom: 1px solid #4a4326; }
+.ld-root.ld-dark .ld-merge-info { color: #e3b341; }
+.ld-root.ld-dark .ld-diff-line.ld-chunk { background-color: #2c2920; border-top: 1px solid #4a4326; border-bottom: 1px solid #4a4326; }
+.ld-root.ld-dark .ld-diff-line.ld-chunk .ld-line-content { color: #e3b341; }
+.ld-root.ld-dark .ld-ch-btn { color: #d7dae0; background-color: #2b3038; border: 1px solid #3a3f4b; }
+.ld-root.ld-dark .ld-ch-btn:hover { background-color: #353c46; }
+.ld-root.ld-dark .ld-ch-btn.on-a { background-color: rgba(248, 81, 73, 0.16); border-color: #ff7b72; color: #ffa198; }
+.ld-root.ld-dark .ld-ch-btn.on-b { background-color: rgba(46, 160, 67, 0.18); border-color: #56d364; color: #7ee787; }
+.ld-root.ld-dark ::-webkit-scrollbar-thumb { background-color: #4a5160; }
+.ld-root.ld-dark ::-webkit-scrollbar-thumb:hover { background-color: #6b7384; }
+.ld-root.ld-dark .ld-fold { color: #7d8799; }
+.ld-root.ld-dark .ld-dialog-overlay { background-color: rgba(0, 0, 0, 0.65); }
+.ld-root.ld-dark .ld-dialog { background-color: #2b3038; border: 1px solid #3a3f4b; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); }
+.ld-root.ld-dark .ld-dialog-title { color: #d7dae0; }
+.ld-root.ld-dark .ld-dialog-message { color: #9ba3b0; }
+.ld-root.ld-dark { background: #1e2227; color: #d7dae0; color-scheme: dark; }

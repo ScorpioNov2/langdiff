@@ -646,6 +646,7 @@ export function initLangdiff(root: HTMLElement) {
     editorB.setLanguage(editorLang);
   });
 
+  root.classList.toggle("ld-dark", editorDark);
   const themeBtn = root.querySelector<HTMLButtonElement>("#ld-theme-btn")!;
   const syncThemeBtn = () => {
     themeBtn.textContent = editorDark ? "Theme: Dark" : "Theme: Light";
@@ -656,6 +657,7 @@ export function initLangdiff(root: HTMLElement) {
     localStorage.setItem(THEME_KEY, editorDark ? "dark" : "light");
     editorA.setDark(editorDark);
     editorB.setDark(editorDark);
+    root.classList.toggle("ld-dark", editorDark);
     syncThemeBtn();
   });
 
@@ -1098,6 +1100,75 @@ export function initLangdiff(root: HTMLElement) {
     if (diffLines.length > 0) recomputeLayoutAndRerender();
   });
 
+  // ---------- In-app dialog (replaces the browser's alert / confirm) ----------
+
+  interface DialogOptions {
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string | null; // null = information only (single OK button)
+  }
+
+  function showDialog(opts: DialogOptions): Promise<boolean> {
+    return new Promise((resolve) => {
+      const prevFocus = document.activeElement as HTMLElement | null;
+      const overlay = document.createElement("div");
+      overlay.className = "ld-dialog-overlay";
+      const card = document.createElement("div");
+      card.className = "ld-dialog";
+      card.setAttribute("role", "dialog");
+      card.setAttribute("aria-modal", "true");
+      const title = document.createElement("div");
+      title.className = "ld-dialog-title";
+      title.textContent = opts.title;
+      const msg = document.createElement("div");
+      msg.className = "ld-dialog-message";
+      msg.textContent = opts.message;
+      const actions = document.createElement("div");
+      actions.className = "ld-dialog-actions";
+
+      const buttons: HTMLButtonElement[] = [];
+      const mk = (text: string, cls: string, result: boolean) => {
+        const b = document.createElement("button");
+        b.className = cls;
+        b.textContent = text;
+        b.addEventListener("click", () => close(result));
+        buttons.push(b);
+        actions.appendChild(b);
+        return b;
+      };
+
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          close(false);
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+          buttons[(i + (e.shiftKey ? buttons.length - 1 : 1)) % buttons.length].focus();
+        }
+      };
+      function close(result: boolean) {
+        document.removeEventListener("keydown", onKey, true);
+        overlay.remove();
+        prevFocus?.focus();
+        resolve(result);
+      }
+
+      if (opts.cancelText !== null) mk(opts.cancelText ?? "Cancel", "ld-btn", false);
+      const ok = mk(opts.confirmText ?? "OK", "ld-btn ld-btn-primary", true);
+      card.append(title, msg, actions);
+      overlay.appendChild(card);
+      overlay.addEventListener("mousedown", (e) => {
+        if (e.target === overlay) close(false);
+      });
+      document.addEventListener("keydown", onKey, true);
+      root.appendChild(overlay);
+      ok.focus();
+    });
+  }
+
   // ---------- Merge (Compare mode) ----------
 
   const mergeInfo = root.querySelector<HTMLElement>("#ld-merge-info")!;
@@ -1168,10 +1239,15 @@ export function initLangdiff(root: HTMLElement) {
   });
 
   // Apply: decided changes become identical in both inputs; undecided ones stay different.
-  applyBtn.addEventListener("click", () => {
+  applyBtn.addEventListener("click", async () => {
     const decided = chunkTake.reduce((n, v) => n + (v ? 1 : 0), 0);
     if (!decided) return;
-    if (!confirm(`Apply ${decided} decision(s)? Text A and Text B will be made identical at those places.`)) return;
+    const ok = await showDialog({
+      title: "Apply merge?",
+      message: `${decided} change${decided === 1 ? "" : "s"} will be written to both inputs, so Text A and Text B become identical at those places. Changes you have not decided on stay different.`,
+      confirmText: "Apply merge",
+    });
+    if (!ok) return;
     const A: string[] = [];
     const B: string[] = [];
     for (const r of compareRows) {
