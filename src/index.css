@@ -1264,4 +1264,18 @@ body.ld-drag-active .ld-drag-overlay {
 .ld-root.ld-dark .ld-dialog { background-color: #2b3038; border: 1px solid #3a3f4b; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); }
 .ld-root.ld-dark .ld-dialog-title { color: #d7dae0; }
 .ld-root.ld-dark .ld-dialog-message { color: #9ba3b0; }
+
 .ld-root.ld-dark { background: #1e2227; color: #d7dae0; color-scheme: dark; }
+
+/* ---------- Icons ---------- */
+.ld-ic { display: block; flex-shrink: 0; }
+.ld-btn { gap: 7px; }
+.ld-btn-primary .ld-ic { stroke-width: 2; }
+.ld-brand { gap: 9px; }
+.ld-brand .ld-ic { color: #0969da; }
+.ld-root.ld-dark .ld-brand .ld-ic { color: #4493f8; }
+.ld-search-nav-btn { gap: 6px; }
+.ld-search-icon { color: #57606a; }
+.ld-root.ld-dark .ld-search-icon { color: #9ba3b0; }
+.ld-fr-chev { display: inline-flex; align-items: center; justify-content: center; width: 14px; }
+.ld-modal-close-btn .ld-ic { display: block; }
