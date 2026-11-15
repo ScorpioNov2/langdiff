@@ -3,11 +3,71 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="shortcut icon" href="/favicon.png" type="image/png">
-    <title>Langdiff</title>
+
+    <title>Langdiff — Free Online Diff Viewer, Text Compare &amp; Patch Reader</title>
+    <meta
+      name="description"
+      content="Free online diff viewer: compare two texts side by side, read git .patch / .diff files file by file, and merge changes in one click. Runs in your browser."
+    />
+    <meta
+      name="keywords"
+      content="diff viewer, text compare, online diff, patch viewer, git diff, .patch, .diff, merge changes, side by side diff, bilingual markdown diff, so sánh văn bản"
+    />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="author" content="Langdiff" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1e2227" media="(prefers-color-scheme: dark)" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Langdiff" />
+    <meta property="og:title" content="Langdiff — Free Online Diff Viewer, Text Compare &amp; Patch Reader" />
+    <meta
+      property="og:description"
+      content="Compare two texts or code files side by side, read git .patch and .diff files with a file list and hunk navigation, highlight changed words, and merge changes with one click. Everything runs in your browser — nothing is uploaded."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Langdiff — Free Online Diff Viewer, Text Compare &amp; Patch Reader" />
+    <meta
+      name="twitter:description"
+      content="Compare texts, read git patches and merge changes in your browser. Side-by-side view, word-level highlights, CodeMirror editors."
+    />
+
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Langdiff",
+        "description": "A free browser-based diff viewer: compare two texts or code files, read git .patch and .diff files, and merge changes. Runs entirely in the browser.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (web browser)",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": ["en", "vi"],
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": [
+          "Compare two texts line by line with word-level highlights",
+          "Side-by-side and unified diff views",
+          "Read git .patch and .diff files with a file list and hunk navigation",
+          "Pick changes from either side, copy the merged text or apply it to both inputs",
+          "CodeMirror 6 editors with syntax highlighting, search and replace, autocomplete and linting",
+          "Light and dark themes"
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script> 
+    <noscript>
+      <h1>Langdiff — free online diff viewer</h1>
+      <p>
+        Langdiff compares two texts or code files side by side, reads git <code>.patch</code> and
+        <code>.diff</code> files file by file, highlights changed words and lets you merge changes with one
+        click. It runs entirely in your browser and needs JavaScript — please enable it to use the app.
+      </p>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

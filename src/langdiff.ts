@@ -40,6 +40,7 @@
  */
 
 import { createEditor, LANGUAGES, type LangId } from "./editor";
+import { icon, withIcon } from "./icons";
 
 const LINE_HEIGHT_PX = 21; // 14px * 1.5 line-height, matches the CSS below
 const VIEWER_BUFFER_PX = 400;
@@ -442,35 +443,35 @@ export function initLangdiff(root: HTMLElement) {
     <div class="ld-drag-overlay">Drop file here to load into Langdiff</div>
     <header class="ld-header">
       <div class="ld-brand">
-        <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.5 1.75v12.5c0 .966.784 1.75 1.75 1.75h9.5A1.75 1.75 0 0 0 14.5 14.25V1.75A1.75 1.75 0 0 0 12.75 0h-9.5A1.75 1.75 0 0 0 1.5 1.75ZM3.25 1.5h9.5a.25.25 0 0 1 .25.25v12.5a.25.25 0 0 1-.25.25h-9.5a.25.25 0 0 1-.25-.25V1.75a.25.25 0 0 1 .25-.25Z"></path><path d="M5 4.75A.75.75 0 0 1 5.75 4h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 4.75ZM5 7.75A.75.75 0 0 1 5.75 7h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 5 7.75ZM5.75 10a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z"></path></svg>
+        ${icon("file", 18)}
         <span>Langdiff</span>
       </div>
       <div class="ld-controls">
         <div class="ld-controls-main">
-        <button class="ld-btn" id="ld-theme-btn" title="Editor theme" data-testid="button-theme">Theme: Light</button>
-        <button class="ld-btn ld-cmp-only" id="ld-split-btn" data-testid="button-split-view">Split view</button>
-        <button class="ld-btn ld-cmp-only" id="ld-syntax-btn" data-testid="button-syntax">Syntax: off</button>
+        <button class="ld-btn" id="ld-theme-btn" title="Editor theme" data-testid="button-theme">${withIcon("sun", "Theme: Light")}</button>
+        <button class="ld-btn ld-cmp-only" id="ld-split-btn" data-testid="button-split-view">${withIcon("columns", "Split view")}</button>
+        <button class="ld-btn ld-cmp-only" id="ld-syntax-btn" data-testid="button-syntax">${withIcon("code", "Syntax: off")}</button>
         <button class="ld-btn" id="ld-find-btn" data-testid="button-find">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>
+          ${icon("search")}
           <span>Find</span>
         </button>
         <button class="ld-btn" id="ld-usage-btn" data-testid="button-usage">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927.906-1.4.678-.508 1.425-1.12 1.425-2.357 0-1.636-1.507-2.372-2.734-2.372-1.393 0-2.615.73-2.697 2.463zm1.59 4.674c0 .515.434.952.964.952a.993.993 0 0 0 .973-.952.993.993 0 0 0-.973-.95c-.53 0-.965.435-.965.95z"/></svg>
+          ${icon("help")}
           <span>Usage</span>
         </button>
         <div class="ld-file-wrapper">
           <button class="ld-btn" data-testid="button-choose-file">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M4.5 4a3.5 3.5 0 1 1 7 0v6.5a2.5 2.5 0 0 1-5 0V4a1.5 1.5 0 0 1 3 0v6a.5.5 0 0 0 1 0V4a2.5 2.5 0 0 0-5 0v6.5a3.5 3.5 0 1 0 7 0V4a4.5 4.5 0 0 0-9 0v6.5a.5.5 0 0 0 1 0V4Z"/></svg>
+            ${icon("upload")}
             <span>Choose File</span>
           </button>
           <input type="file" id="ld-file-picker" accept=".txt,.md,.patch,.diff" data-testid="input-file-picker">
         </div>
         <button class="ld-btn" id="ld-toggle-input" data-testid="button-toggle-input">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z"/><path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8Zm8 4.5c3.646 0 6.646-3.479 7.472-4.5-.826-1.021-3.826-4.5-7.472-4.5-3.646 0-6.646 3.479-7.472 4.5.826 1.021 3.826 4.5 7.472 4.5Z"/></svg>
+          ${icon("panel")}
           <span>Toggle Input</span>
         </button>
         <button class="ld-btn ld-btn-primary" id="ld-render-btn" data-testid="button-render">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8.3 0a.75.75 0 0 1 .718.528l2.5 7.5A.75.75 0 0 1 10.8 9H7.5l1.372 6.173a.75.75 0 0 1-1.32.593l-5.5-7.5A.75.75 0 0 1 2.5 7h3.3L4.427.528A.75.75 0 0 1 5.15 0H8.3Z"></path></svg>
+          ${icon("play")}
           <span>Render View</span>
         </button>
         </div>
@@ -489,41 +490,41 @@ export function initLangdiff(root: HTMLElement) {
       </div>
     </header>
     <div class="ld-search-bar" id="ld-search-bar">
-      <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" class="ld-search-icon"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>
+      ${icon("search", 14, "ld-search-icon")}
       <input type="text" id="ld-search-input" class="ld-search-input" placeholder="Search text..." data-testid="input-search">
       <span class="ld-search-count" id="ld-search-count"></span>
-      <button class="ld-search-nav-btn" id="ld-search-prev" title="Previous match" data-testid="button-search-prev">&#8249;</button>
-      <button class="ld-search-nav-btn" id="ld-search-next" title="Next match" data-testid="button-search-next">&#8250;</button>
+      <button class="ld-search-nav-btn" id="ld-search-prev" title="Previous match" data-testid="button-search-prev">${icon("chevronUp", 14)}</button>
+      <button class="ld-search-nav-btn" id="ld-search-next" title="Next match" data-testid="button-search-next">${icon("chevronDown", 14)}</button>
       <div class="ld-search-divider"></div>
       <span class="ld-search-goto-label">Go to line</span>
       <input type="number" min="1" id="ld-goto-input" class="ld-goto-input" placeholder="#" data-testid="input-goto-line">
       <button class="ld-search-nav-btn ld-search-goto-btn" id="ld-goto-btn" data-testid="button-goto-line">Go</button>
-      <button class="ld-search-close" id="ld-search-close" title="Close" data-testid="button-close-search">&#10005;</button>
+      <button class="ld-search-close" id="ld-search-close" title="Close" data-testid="button-close-search">${icon("x", 14)}</button>
     </div>
     <div class="ld-filebar" id="ld-filebar">
-      <button class="ld-search-nav-btn" id="ld-files-toggle" title="File list (f)" data-testid="button-files">Files</button>
-      <button class="ld-search-nav-btn" id="ld-prev-hunk" title="Previous hunk (k)" data-testid="button-prev-hunk">&#9650;</button>
-      <button class="ld-search-nav-btn" id="ld-next-hunk" title="Next hunk (j)" data-testid="button-next-hunk">&#9660;</button>
+      <button class="ld-search-nav-btn" id="ld-files-toggle" title="File list (f)" data-testid="button-files">${withIcon("list", "Files")}</button>
+      <button class="ld-search-nav-btn" id="ld-prev-hunk" title="Previous hunk (k)" data-testid="button-prev-hunk">${icon("chevronUp", 14)}</button>
+      <button class="ld-search-nav-btn" id="ld-next-hunk" title="Next hunk (j)" data-testid="button-next-hunk">${icon("chevronDown", 14)}</button>
       <span class="ld-fs ld-fs-M" id="ld-fb-status"></span>
       <span class="ld-fb-path" id="ld-fb-path" data-testid="text-current-file"></span>
       <span class="ld-fb-stats" id="ld-fb-stats"></span>
-      <button class="ld-search-nav-btn" id="ld-fb-collapse" title="Collapse / expand file (c)" data-testid="button-collapse-file">Collapse</button>
+      <button class="ld-search-nav-btn" id="ld-fb-collapse" title="Collapse / expand file (c)" data-testid="button-collapse-file">${withIcon("fold", "Collapse")}</button>
     </div>
     <div class="ld-mergebar" id="ld-mergebar">
       <span class="ld-merge-info" id="ld-merge-info" data-testid="text-merge-info"></span>
       <button class="ld-btn" id="ld-take-all-b" data-testid="button-take-all-b">Take all B</button>
       <button class="ld-btn" id="ld-keep-all-a" data-testid="button-keep-all-a">Keep all A</button>
-      <button class="ld-btn" id="ld-merge-reset" data-testid="button-merge-reset">Reset</button>
+      <button class="ld-btn" id="ld-merge-reset" data-testid="button-merge-reset">${withIcon("reset", "Reset")}</button>
       <span class="ld-merge-spacer"></span>
-      <button class="ld-btn" id="ld-merge-copy" data-testid="button-merge-copy">Copy merged</button>
-      <button class="ld-btn ld-btn-primary" id="ld-merge-apply" data-testid="button-merge-apply">Apply merge</button>
+      <button class="ld-btn" id="ld-merge-copy" data-testid="button-merge-copy">${withIcon("copy", "Copy merged")}</button>
+      <button class="ld-btn ld-btn-primary" id="ld-merge-apply" data-testid="button-merge-apply">${withIcon("merge", "Apply merge")}</button>
     </div>
     <aside class="ld-files-panel" id="ld-files-panel">
       <div class="ld-files-head">
         <input type="text" id="ld-files-filter" class="ld-search-input" placeholder="Filter files..." data-testid="input-file-filter">
-        <button class="ld-search-nav-btn" id="ld-collapse-all" data-testid="button-collapse-all">Collapse all</button>
-        <button class="ld-search-nav-btn" id="ld-expand-all" data-testid="button-expand-all">Expand all</button>
-        <button class="ld-search-nav-btn ld-files-close" id="ld-files-close" title="Close (Esc)" data-testid="button-close-files">&times;</button>
+        <button class="ld-search-nav-btn" id="ld-collapse-all" data-testid="button-collapse-all">${withIcon("fold", "Collapse all")}</button>
+        <button class="ld-search-nav-btn" id="ld-expand-all" data-testid="button-expand-all">${withIcon("unfold", "Expand all")}</button>
+        <button class="ld-search-nav-btn ld-files-close" id="ld-files-close" title="Close (Esc)" data-testid="button-close-files">${icon("x", 14)}</button>
       </div>
       <div class="ld-files-list" id="ld-files-list"></div>
     </aside>
@@ -548,7 +549,7 @@ export function initLangdiff(root: HTMLElement) {
       <div class="ld-modal-card">
         <div class="ld-modal-close-wrapper">
           <button class="ld-modal-close-btn" id="ld-usage-close" data-testid="button-close-usage">
-            <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 1 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06z"></path></svg>
+            ${icon("x", 18)}
           </button>
         </div>
         <div class="ld-modal-header">
@@ -649,7 +650,7 @@ export function initLangdiff(root: HTMLElement) {
   root.classList.toggle("ld-dark", editorDark);
   const themeBtn = root.querySelector<HTMLButtonElement>("#ld-theme-btn")!;
   const syncThemeBtn = () => {
-    themeBtn.textContent = editorDark ? "Theme: Dark" : "Theme: Light";
+    themeBtn.innerHTML = editorDark ? withIcon("moon", "Theme: Dark") : withIcon("sun", "Theme: Light");
   };
   syncThemeBtn();
   themeBtn.addEventListener("click", () => {
@@ -806,8 +807,10 @@ export function initLangdiff(root: HTMLElement) {
       sp.textContent = text;
       return sp;
     };
+    const chev = mk("ld-fr-chev", "");
+    chev.innerHTML = icon(collapsed.has(d.file as number) ? "chevronRight" : "chevronDown", 13);
     el.replaceChildren(
-      mk("ld-fr-chev", collapsed.has(d.file as number) ? "\u25b8" : "\u25be"),
+      chev,
       mk(`ld-fs ld-fs-${fi?.status ?? "M"}`, fi?.status ?? "M"),
       mk("ld-fr-name", d.content),
       statsNode(fi, "ld-fr-stats"),
@@ -1074,8 +1077,8 @@ export function initLangdiff(root: HTMLElement) {
   const splitBtn = root.querySelector<HTMLButtonElement>("#ld-split-btn")!;
   const syntaxBtn = root.querySelector<HTMLButtonElement>("#ld-syntax-btn")!;
   function syncCompareButtons() {
-    splitBtn.textContent = compareView === "split" ? "Unified view" : "Split view";
-    syntaxBtn.textContent = syntaxOn ? "Syntax: on" : "Syntax: off";
+    splitBtn.innerHTML = compareView === "split" ? withIcon("rows", "Unified view") : withIcon("columns", "Split view");
+    syntaxBtn.innerHTML = withIcon("code", syntaxOn ? "Syntax: on" : "Syntax: off");
   }
   function syncCompareUi() {
     const on = modeSelect.value === "compare" || viewKind === "compare";
@@ -1224,6 +1227,7 @@ export function initLangdiff(root: HTMLElement) {
 
   copyBtn.addEventListener("click", async () => {
     const text = mergedLines().join("\n");
+    let copied = true;
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -1231,11 +1235,16 @@ export function initLangdiff(root: HTMLElement) {
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand("copy");
-      ta.remove();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        ta.remove();
+      }
     }
-    copyBtn.textContent = "Copied \u2713";
-    setTimeout(() => { copyBtn.textContent = "Copy merged"; }, 1200);
+    copyBtn.innerHTML = copied ? withIcon("check", "Copied") : withIcon("x", "Copy failed");
+    setTimeout(() => { copyBtn.innerHTML = withIcon("copy", "Copy merged"); }, 1200);
   });
 
   // Apply: decided changes become identical in both inputs; undecided ones stay different.
@@ -1348,7 +1357,7 @@ export function initLangdiff(root: HTMLElement) {
     fbStatus.style.visibility = fi ? "visible" : "hidden";
     fbPath.textContent = fi ? fi.name : "(patch header)";
     fbStats.replaceChildren(...Array.from(statsNode(fi, "").childNodes));
-    fbCollapse.textContent = fi && collapsed.has(f) ? "Expand" : "Collapse";
+    fbCollapse.innerHTML = fi && collapsed.has(f) ? withIcon("unfold", "Expand") : withIcon("fold", "Collapse");
     if (fi) {
       const el = fileItems[f];
       el.classList.add("ld-file-active");
